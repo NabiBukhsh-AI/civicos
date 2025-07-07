@@ -1,0 +1,17 @@
+google-generativeai==0.7.2
+python-dotenv
+langchain==0.2.15
+PyPDF2==3.0.1
+faiss-cpu==1.8.0.post1
+langchain_google_genai==1.0.10
+fastapi
+uvicorn
+Pillow
+python-multipart
+geopy
+python-docx
+pytesseract
+opencv-python-headless
+numpy
+langchain-community
+exifread

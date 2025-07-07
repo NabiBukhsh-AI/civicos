@@ -1,0 +1,30 @@
+# Python virtual environment
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# FAISS vector store
+faiss_index/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# IDE-specific files
+.idea/
+.vscode/
+
+# macOS-specific files
+.DS_Store
+
+# Temporary files
+*.log
+*.tmp
+
+# PDF and image files
+*.pdf
+*.jpg
+*.jpeg
+*.png
