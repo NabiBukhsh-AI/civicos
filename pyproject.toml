@@ -1,0 +1,145 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "civicos"
+version = "2.0.0"
+description = "CivicOS - a multi-tenant, AI-native municipal operations platform for towns, union councils and city districts."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Nabi Bukhsh Baloch" }]
+keywords = ["municipal", "govtech", "civic", "ai", "fastapi", "311", "smart-city"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Framework :: FastAPI",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business",
+]
+
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.6",
+  "email-validator>=2.2",
+  "sqlalchemy[asyncio]>=2.0.36",
+  "alembic>=1.14",
+  "greenlet>=3.1",
+  "aiosqlite>=0.20",
+  "pyjwt>=2.10",
+  "bcrypt>=4.2",
+  "httpx>=0.28",
+  "tenacity>=9.0",
+  "structlog>=24.4",
+  "orjson>=3.10",
+  "python-multipart>=0.0.20",
+  "pillow>=11.0",
+  "exifread>=3.0",
+  "pypdf>=5.1",
+  "python-docx>=1.1",
+  "numpy>=2.0",
+  "typer>=0.15",
+  "rich>=13.9",
+  "prometheus-client>=0.21",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.30", "pgvector>=0.3.6"]
+redis = ["redis>=5.2", "arq>=0.26"]
+anthropic = ["anthropic>=0.40"]
+google = ["google-genai>=0.3"]
+openai = ["openai>=1.57"]
+storage = ["boto3>=1.35"]
+otel = [
+  "opentelemetry-sdk>=1.29",
+  "opentelemetry-instrumentation-fastapi>=0.50b0",
+  "opentelemetry-exporter-otlp>=1.29",
+]
+all = [
+  "civicos[postgres,redis,anthropic,google,openai,storage,otel]",
+]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.25",
+  "pytest-cov>=6.0",
+  "ruff>=0.8",
+  "mypy>=1.13",
+  "types-python-dateutil",
+  "pre-commit>=4.0",
+]
+
+[project.scripts]
+civicos = "civicos.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/NabiBukhsh-AI/Municipal-AI-Assistant"
+Repository = "https://github.com/NabiBukhsh-AI/Municipal-AI-Assistant"
+Issues = "https://github.com/NabiBukhsh-AI/Municipal-AI-Assistant/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/civicos"]
+
+# ---------------------------------------------------------------- tooling ----
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",    # pycodestyle
+  "F",         # pyflakes
+  "I",         # isort
+  "N",         # pep8-naming
+  "UP",        # pyupgrade
+  "B",         # bugbear
+  "C4",        # comprehensions
+  "SIM",       # simplify
+  "TID",       # tidy imports
+  "RUF",       # ruff rules
+  "ASYNC",     # async correctness
+  "S",         # bandit security
+]
+ignore = [
+  "S101",   # assert (used in tests)
+  "B008",   # function call in default arg -> FastAPI Depends idiom
+  "RUF012", # mutable class attrs need ClassVar -> noisy with SQLAlchemy
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "S311"]
+"src/civicos/db/seed.py" = ["S105", "S106"]
+"migrations/*" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["civicos"]
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
+warn_redundant_casts = true
+warn_unused_ignores = false
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = ["migrations/"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+  "integration: tests that touch external services",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["src/civicos"]
+omit = ["*/migrations/*", "*/tests/*"]
