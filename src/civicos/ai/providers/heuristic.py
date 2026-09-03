@@ -83,7 +83,14 @@ class HeuristicProvider(LLMProvider):
 
     async def complete(self, request: CompletionRequest) -> CompletionResult:
         started = time.perf_counter()
-        prompt = "\n".join(m.content for m in request.messages if m.role != "system")
+        # `classify_text` lets a caller name the text that should drive rule
+        # matching. Without it we would classify the whole prompt, taxonomy
+        # listing included, and match keywords belonging to the instructions
+        # rather than to the resident's own words.
+        prompt = str(
+            request.context.get("classify_text")
+            or "\n".join(m.content for m in request.messages if m.role != "system")
+        )
         image_count = len(request.images)
 
         if request.response_schema:

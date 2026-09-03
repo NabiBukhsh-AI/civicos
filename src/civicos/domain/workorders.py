@@ -243,6 +243,8 @@ class MaterialUsage(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
     unit: Mapped[str] = mapped_column(String(24), default="unit", nullable=False)
     unit_cost: Mapped[float | None] = mapped_column(Float)
 
+    work_order: Mapped[WorkOrder] = relationship(back_populates="materials")
+
     @property
     def total_cost(self) -> float | None:
         return None if self.unit_cost is None else round(self.unit_cost * self.quantity, 2)

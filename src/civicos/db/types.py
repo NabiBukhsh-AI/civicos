@@ -16,12 +16,23 @@ from sqlalchemy import JSON as SAJSON
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.mutable import MutableDict, MutableList
 
+def json_type() -> Any:
+    """A fresh ``JSONB``-on-PostgreSQL / ``JSON``-elsewhere type instance.
+
+    ``as_mutable`` associates a mutable wrapper with the *type object* it is
+    given, so the dict and list flavours below must not share one instance -
+    the second association would otherwise shadow the first and coercion would
+    fail at runtime.
+    """
+    return SAJSON().with_variant(postgresql.JSONB(astext_type=Text()), "postgresql")
+
+
 #: ``JSONB`` on PostgreSQL, plain ``JSON`` elsewhere.
-JSONColumn = SAJSON().with_variant(postgresql.JSONB(astext_type=Text()), "postgresql")
+JSONColumn = json_type()
 
 #: Mutable variants so in-place edits (``obj.meta["k"] = v``) are flushed.
-MutableJSONDict = MutableDict.as_mutable(JSONColumn)
-MutableJSONList = MutableList.as_mutable(JSONColumn)
+MutableJSONDict = MutableDict.as_mutable(json_type())
+MutableJSONList = MutableList.as_mutable(json_type())
 
 
 class UTCDateTime(TypeDecorator):

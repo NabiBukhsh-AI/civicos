@@ -68,7 +68,11 @@ async def triage_report(
         schema_name="triage_result",
         max_output_tokens=900,
         temperature=0.0,
-        context={"categories": len(categories)},
+        context={
+            "categories": len(categories),
+            # Used only by the offline provider, ignored by real ones.
+            "classify_text": f"{title}\n{description}",
+        },
     )
 
     result = await run_completion(request, capability="triage", usage=usage)

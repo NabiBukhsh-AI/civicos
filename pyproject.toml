@@ -47,6 +47,8 @@ dependencies = [
   "typer>=0.15",
   "rich>=13.9",
   "prometheus-client>=0.21",
+  # The stdlib zoneinfo has no bundled database on Windows or slim images.
+  "tzdata>=2024.2; sys_platform == 'win32' or platform_system == 'Linux'",
 ]
 
 [project.optional-dependencies]

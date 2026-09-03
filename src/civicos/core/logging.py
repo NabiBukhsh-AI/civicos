@@ -82,7 +82,9 @@ def configure_logging(settings: Settings | None = None) -> None:
     structlog.configure(
         processors=[*shared_processors, renderer],
         wrapper_class=structlog.make_filtering_bound_logger(level),
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        # Route through stdlib logging so uvicorn/SQLAlchemy records land in the
+        # same stream and handlers, and `add_logger_name` has a name to read.
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
 

@@ -6,7 +6,7 @@ only when rendering for humans or computing working-hour SLAs.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from civicos.core.config import get_settings
@@ -21,12 +21,21 @@ def ensure_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
-def get_zone(name: str | None = None) -> ZoneInfo:
+def get_zone(name: str | None = None) -> tzinfo:
+    """Resolve a timezone, degrading to UTC rather than raising.
+
+    Windows and slim containers ship no system tz database, so ``ZoneInfo``
+    can fail even for ``"UTC"`` when the ``tzdata`` package is absent. A
+    municipality's reports must not stop because of that, so the final
+    fallback is the stdlib UTC object.
+    """
     candidate = name or get_settings().timezone
-    try:
-        return ZoneInfo(candidate)
-    except (ZoneInfoNotFoundError, ValueError):
-        return ZoneInfo("UTC")
+    for key in (candidate, "UTC"):
+        try:
+            return ZoneInfo(key)
+        except (ZoneInfoNotFoundError, ValueError, KeyError):
+            continue
+    return UTC
 
 
 def to_local(value: datetime, timezone: str | None = None) -> datetime:
