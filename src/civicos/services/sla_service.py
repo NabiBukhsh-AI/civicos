@@ -13,9 +13,9 @@ engine is deliberately explicit rather than clever:
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
-from typing import Sequence
 
 import structlog
 from sqlalchemy import select
@@ -84,14 +84,10 @@ async def compute_targets(
 ) -> SLATargets:
     """Compute the response and resolution deadlines for an issue."""
     start = start or utcnow()
-    policy = await resolve_policy(
-        session, tenant_id, category_id=category_id, priority=priority
-    )
+    policy = await resolve_policy(session, tenant_id, category_id=category_id, priority=priority)
 
     response_minutes = policy.response_minutes if policy else DEFAULT_RESPONSE_MINUTES
-    resolution_minutes = (
-        policy.resolution_minutes if policy else DEFAULT_RESOLUTION_MINUTES
-    )
+    resolution_minutes = policy.resolution_minutes if policy else DEFAULT_RESOLUTION_MINUTES
     warning = policy.warning_threshold if policy else DEFAULT_WARNING_THRESHOLD
     business_hours = policy.business_hours_only if policy else True
 
@@ -206,10 +202,11 @@ async def refresh(
         issue.sla_resolution_state = states["resolution"]
 
     for stage in newly_breached:
-        category = issue.category.slug if issue.category else "uncategorised"
-        SLA_BREACHES.labels(
-            tenant=str(issue.tenant_id), stage=str(stage), category=category
-        ).inc()
+        # Read the label only if the relationship is already loaded: this runs
+        # during intake too, where `issue` was just constructed in memory and a
+        # lazy load would raise on an async session.
+        category = _category_label(issue)
+        SLA_BREACHES.labels(tenant=str(issue.tenant_id), stage=str(stage), category=category).inc()
         session.add(
             IssueEvent(
                 tenant_id=issue.tenant_id,
@@ -243,9 +240,7 @@ async def refresh(
     return newly_breached
 
 
-def escalation_targets(
-    department: Department | None, level: int
-) -> list[uuid.UUID]:
+def escalation_targets(department: Department | None, level: int) -> list[uuid.UUID]:
     """Who to notify at a given escalation level.
 
     The chain is department-configured; level 1 is the first name on it,
@@ -268,9 +263,7 @@ def time_remaining(issue: Issue, stage: SLAStage) -> timedelta | None:
 
 def compliance_rate(issues: Sequence[Issue], stage: SLAStage) -> float:
     """Share of issues that met the given stage, ignoring ones still running."""
-    attribute = (
-        "sla_response_state" if stage is SLAStage.RESPONSE else "sla_resolution_state"
-    )
+    attribute = "sla_response_state" if stage is SLAStage.RESPONSE else "sla_resolution_state"
     decided = [
         getattr(issue, attribute)
         for issue in issues
@@ -280,6 +273,15 @@ def compliance_rate(issues: Sequence[Issue], stage: SLAStage) -> float:
         return 1.0
     met = sum(1 for state in decided if state is SLAState.MET)
     return round(met / len(decided), 4)
+
+
+def _category_label(issue: Issue) -> str:
+    """Category slug for metrics, without triggering a lazy load."""
+    from sqlalchemy import inspect as sa_inspect
+
+    if "category" in sa_inspect(issue).unloaded:
+        return "uncategorised"
+    return issue.category.slug if issue.category else "uncategorised"
 
 
 def _working_hours(

@@ -8,13 +8,15 @@ representation per dialect and present one Python-side API to the models.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Any, Sequence
+from typing import Any
 
-from sqlalchemy import DateTime, Dialect, Float, String, Text, TypeDecorator
 from sqlalchemy import JSON as SAJSON
+from sqlalchemy import DateTime, Dialect, Float, String, Text, TypeDecorator
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.mutable import MutableDict, MutableList
+
 
 def json_type() -> Any:
     """A fresh ``JSONB``-on-PostgreSQL / ``JSON``-elsewhere type instance.
@@ -71,20 +73,24 @@ class StringEnum(TypeDecorator):
     impl = String
     cache_ok = True
 
-    def __init__(self, enum_class: type, length: int = 48) -> None:
+    def __init__(self, enum_class: type | None = None, length: int = 48) -> None:
+        # ``enum_class`` is optional so that Alembic can reconstruct the type
+        # from a generated migration, where only the VARCHAR shape matters.
         self.enum_class = enum_class
         super().__init__(length=length)
 
     def process_bind_param(self, value: Any, dialect: Dialect) -> str | None:
         if value is None:
             return None
+        if self.enum_class is None:
+            return str(getattr(value, "value", value))
         if isinstance(value, self.enum_class):
             return str(value.value)
         return str(self.enum_class(value).value)
 
     def process_result_value(self, value: Any, dialect: Dialect) -> Any:
-        if value is None:
-            return None
+        if value is None or self.enum_class is None:
+            return value
         try:
             return self.enum_class(value)
         except ValueError:
@@ -110,7 +116,7 @@ class Vector(TypeDecorator):
     def load_dialect_impl(self, dialect: Dialect) -> Any:
         if dialect.name == "postgresql":
             try:
-                from pgvector.sqlalchemy import Vector as PGVector  # noqa: PLC0415
+                from pgvector.sqlalchemy import Vector as PGVector
 
                 return dialect.type_descriptor(PGVector(self.dimensions))
             except ImportError:
@@ -123,7 +129,7 @@ class Vector(TypeDecorator):
         values = [float(v) for v in value]
         if dialect.name == "postgresql":
             try:
-                import pgvector.sqlalchemy  # noqa: F401, PLC0415
+                import pgvector.sqlalchemy  # noqa: F401
 
                 return values
             except ImportError:

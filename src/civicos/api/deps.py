@@ -9,7 +9,8 @@ the checks.
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, Any, Callable
+from collections.abc import Callable
+from typing import Annotated, Any
 
 import structlog
 from fastapi import Depends, Header, Query, Request
@@ -48,9 +49,7 @@ async def get_tenant(
     request: Request,
     session: SessionDep,
     settings: SettingsDep,
-    credentials: Annotated[
-        HTTPAuthorizationCredentials | None, Depends(bearer_scheme)
-    ] = None,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)] = None,
 ) -> Municipality:
     """Resolve the municipality this request belongs to.
 
@@ -73,8 +72,7 @@ async def get_tenant(
     slug = getattr(request.state, "tenant_slug_hint", None)
     if not slug:
         raise TenantResolutionError(
-            "Specify the municipality with the "
-            f"'{settings.tenancy.header_name}' header.",
+            f"Specify the municipality with the '{settings.tenancy.header_name}' header.",
             details={"header": settings.tenancy.header_name},
         )
 
@@ -87,9 +85,7 @@ def _bind_tenant(request: Request, tenant: Municipality) -> None:
     request.state.tenant = tenant
     context.set_tenant(tenant.id, tenant.slug)
     context.set_language(
-        normalise_language(
-            getattr(request.state, "language", None) or tenant.default_language
-        )
+        normalise_language(getattr(request.state, "language", None) or tenant.default_language)
     )
 
 
@@ -100,9 +96,7 @@ async def get_optional_actor(
     request: Request,
     session: SessionDep,
     tenant: TenantDep,
-    credentials: Annotated[
-        HTTPAuthorizationCredentials | None, Depends(bearer_scheme)
-    ] = None,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)] = None,
     api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
 ) -> Actor:
     """Identify the caller if possible; anonymous is a valid answer here.
@@ -146,9 +140,7 @@ OptionalActorDep = Annotated[Actor, Depends(get_optional_actor)]
 async def get_actor(actor: OptionalActorDep) -> Actor:
     """Require an authenticated caller."""
     if not actor.is_authenticated:
-        raise AuthenticationError(
-            "Sign in to perform this action.", code="authentication_required"
-        )
+        raise AuthenticationError("Sign in to perform this action.", code="authentication_required")
     return actor
 
 
@@ -239,9 +231,7 @@ def require_superadmin() -> Callable[..., Any]:
 def ai_rate_limit(capability: str = "ai") -> Callable[..., Any]:
     """Tighter throttle for endpoints that spend money on every call."""
 
-    async def _check(
-        request: Request, actor: OptionalActorDep, settings: SettingsDep
-    ) -> None:
+    async def _check(request: Request, actor: OptionalActorDep, settings: SettingsDep) -> None:
         if not settings.rate_limit.enabled:
             return
         identity = (

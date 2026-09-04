@@ -20,6 +20,7 @@ import math
 import re
 import time
 from collections import Counter
+from itertools import pairwise
 from typing import Any
 
 from civicos.ai.providers.base import LLMProvider, coerce_schema_defaults
@@ -39,11 +40,21 @@ _CATEGORY_RULES: tuple[tuple[tuple[str, ...], str, str, str], ...] = (
     (("electrocut", "live wire", "shock", "sparking"), "streetlights", "emergency", "critical"),
     (("sewer", "sewage", "gutter", "manhole", "overflow"), "sewerage", "high", "major"),
     (("drain", "flood", "waterlogg", "standing water", "rain water"), "drainage", "high", "major"),
-    (("garbage", "trash", "rubbish", "waste", "dump", "litter"), "solid-waste", "normal", "moderate"),
+    (
+        ("garbage", "trash", "rubbish", "waste", "dump", "litter"),
+        "solid-waste",
+        "normal",
+        "moderate",
+    ),
     (("water supply", "no water", "tanker", "pipeline", "leak"), "water-supply", "high", "major"),
     (("pothole", "road", "street repair", "pavement", "footpath"), "roads", "normal", "moderate"),
     (("streetlight", "street light", "lamp", "pole", "dark"), "streetlights", "normal", "minor"),
-    (("encroach", "illegal construction", "occupied", "kiosk"), "encroachment", "normal", "moderate"),
+    (
+        ("encroach", "illegal construction", "occupied", "kiosk"),
+        "encroachment",
+        "normal",
+        "moderate",
+    ),
     (("park", "playground", "tree", "green belt"), "parks", "low", "minor"),
     (("stray", "dog", "animal", "cattle"), "animal-control", "normal", "moderate"),
     (("mosquito", "dengue", "fogging", "spray"), "public-health", "high", "moderate"),
@@ -96,9 +107,7 @@ class HeuristicProvider(LLMProvider):
         if request.response_schema:
             payload = self._structured(request, prompt, image_count)
             text = _dump_json(payload)
-            parsed: dict[str, Any] | None = coerce_schema_defaults(
-                payload, request.response_schema
-            )
+            parsed: dict[str, Any] | None = coerce_schema_defaults(payload, request.response_schema)
         else:
             text = self._prose(prompt, image_count)
             parsed = None
@@ -192,8 +201,7 @@ class HeuristicProvider(LLMProvider):
         slug, priority, _severity, matched = classify(prompt)
         pretty = slug.replace("-", " ")
         lines = [
-            "AI assistance is not configured on this deployment, so this is a "
-            "rule-based response.",
+            "AI assistance is not configured on this deployment, so this is a rule-based response.",
         ]
         if matched:
             lines.append(
@@ -292,7 +300,7 @@ def hashing_embedding(text: str, dimensions: int) -> list[float]:
     words = tokenize(text, drop_stopwords=True) or _TOKEN_SPLIT.findall(text.lower())
     features: Counter[str] = Counter()
     features.update(words)
-    features.update(f"{a}_{b}" for a, b in zip(words, words[1:], strict=False))
+    features.update(f"{a}_{b}" for a, b in pairwise(words))
 
     compact = re.sub(r"\s+", " ", text.lower())
     features.update(compact[i : i + 4] for i in range(0, max(len(compact) - 3, 0)))
@@ -312,7 +320,7 @@ def hashing_embedding(text: str, dimensions: int) -> list[float]:
 
 
 def _dump_json(payload: dict[str, Any]) -> str:
-    import json  # noqa: PLC0415
+    import json
 
     return json.dumps(payload, ensure_ascii=False)
 

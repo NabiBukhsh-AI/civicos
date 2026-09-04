@@ -8,14 +8,13 @@ Run with::
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import ORJSONResponse
 
 from civicos import __version__
 from civicos.api.router import api_router
@@ -70,9 +69,15 @@ targets and languages.
 
 TAGS_METADATA = [
     {"name": "Public Portal", "description": "Unauthenticated, redacted, cacheable."},
-    {"name": "Authentication", "description": "Password and phone-OTP sign-in, sessions, API keys."},
+    {
+        "name": "Authentication",
+        "description": "Password and phone-OTP sign-in, sessions, API keys.",
+    },
     {"name": "Issues", "description": "Citizen reports and their full lifecycle."},
-    {"name": "AI Assistant", "description": "Grounded Q&A, vision analysis, triage preview, briefings."},
+    {
+        "name": "AI Assistant",
+        "description": "Grounded Q&A, vision analysis, triage preview, briefings.",
+    },
     {"name": "Knowledge Base", "description": "Document upload, indexing and semantic search."},
     {"name": "Work Orders", "description": "Field work: dispatch, progress, completion."},
     {"name": "Assets", "description": "Municipal asset registry and inspections."},
@@ -95,7 +100,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging(settings)
     set_build_info(__version__)
 
-    from civicos.db.session import ping  # noqa: PLC0415
+    from civicos.db.session import ping
 
     logger.info(
         "starting",
@@ -109,9 +114,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     yield
 
-    from civicos.ai.registry import reset_providers  # noqa: PLC0415
-    from civicos.core.rate_limit import reset_rate_limiter  # noqa: PLC0415
-    from civicos.db.session import dispose_engine  # noqa: PLC0415
+    from civicos.ai.registry import reset_providers
+    from civicos.core.rate_limit import reset_rate_limiter
+    from civicos.db.session import dispose_engine
 
     await reset_providers()
     await reset_rate_limiter()
@@ -129,7 +134,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         description=DESCRIPTION,
         version=__version__,
         openapi_tags=TAGS_METADATA,
-        default_response_class=ORJSONResponse,
         docs_url="/docs" if settings.docs_enabled else None,
         redoc_url="/redoc" if settings.docs_enabled else None,
         openapi_url="/openapi.json" if settings.docs_enabled else None,

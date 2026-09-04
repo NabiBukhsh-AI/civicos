@@ -9,7 +9,8 @@ decision without turning the audit table into a second copy of the database.
 from __future__ import annotations
 
 import uuid
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import structlog
 from sqlalchemy import select
@@ -107,9 +108,7 @@ async def record_change(
     )
 
 
-def diff(
-    before: dict[str, Any], after: dict[str, Any]
-) -> tuple[dict[str, Any], dict[str, Any]]:
+def diff(before: dict[str, Any], after: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     """Field-level difference between two snapshots."""
     changed_before: dict[str, Any] = {}
     changed_after: dict[str, Any] = {}
@@ -161,7 +160,7 @@ async def history(
     page: PageParams | None = None,
 ) -> tuple[Sequence[AuditLog], int]:
     """Query the audit trail for the admin console."""
-    from sqlalchemy import func  # noqa: PLC0415
+    from sqlalchemy import func
 
     statement = select(AuditLog).where(AuditLog.tenant_id == tenant_id)
     if entity_type:
@@ -173,9 +172,7 @@ async def history(
     if action:
         statement = statement.where(AuditLog.action == action)
 
-    total = int(
-        await session.scalar(select(func.count()).select_from(statement.subquery())) or 0
-    )
+    total = int(await session.scalar(select(func.count()).select_from(statement.subquery())) or 0)
     statement = statement.order_by(AuditLog.created_at.desc())
     if page:
         statement = statement.offset(page.offset).limit(page.limit)

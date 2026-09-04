@@ -87,7 +87,7 @@ def parse_document(data: bytes, content_type: str, filename: str = "") -> Parsed
 
 def _parse_pdf(data: bytes) -> ParsedDocument:
     try:
-        from pypdf import PdfReader  # noqa: PLC0415
+        from pypdf import PdfReader
     except ImportError as exc:  # pragma: no cover
         raise UnsupportedMediaError("PDF support requires 'pypdf'.") from exc
 
@@ -106,18 +106,14 @@ def _parse_pdf(data: bytes) -> ParsedDocument:
     metadata: dict[str, Any] = {}
     if reader.metadata:
         metadata = {
-            key.lstrip("/").lower(): str(value)
-            for key, value in reader.metadata.items()
-            if value
+            key.lstrip("/").lower(): str(value) for key, value in reader.metadata.items() if value
         }
-    return ParsedDocument(
-        text="".join(parts), page_count=len(reader.pages), metadata=metadata
-    )
+    return ParsedDocument(text="".join(parts), page_count=len(reader.pages), metadata=metadata)
 
 
 def _parse_docx(data: bytes) -> ParsedDocument:
     try:
-        import docx  # noqa: PLC0415
+        import docx
     except ImportError as exc:  # pragma: no cover
         raise UnsupportedMediaError("DOCX support requires 'python-docx'.") from exc
 
@@ -214,9 +210,7 @@ def _split_body(body: str, chunk_size: int, overlap: int) -> list[str]:
             if current:
                 pieces.append(" ".join(current))
                 current, length = [], 0
-            pieces.extend(
-                sentence[i : i + chunk_size] for i in range(0, len(sentence), chunk_size)
-            )
+            pieces.extend(sentence[i : i + chunk_size] for i in range(0, len(sentence), chunk_size))
             continue
         if length + len(sentence) + 1 > chunk_size and current:
             pieces.append(" ".join(current))

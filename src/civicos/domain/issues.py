@@ -206,20 +206,20 @@ class Issue(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteMixin, M
     admin_unit: Mapped[AdminUnit | None] = relationship(lazy="joined")
     reporter: Mapped[User | None] = relationship(foreign_keys=[reporter_id], lazy="joined")
     assignee: Mapped[User | None] = relationship(foreign_keys=[assigned_to_id], lazy="joined")
-    duplicate_of: Mapped["Issue | None"] = relationship(remote_side="Issue.id")
+    duplicate_of: Mapped[Issue | None] = relationship(remote_side="Issue.id")
 
-    attachments: Mapped[list["IssueAttachment"]] = relationship(
+    attachments: Mapped[list[IssueAttachment]] = relationship(
         back_populates="issue", cascade="all, delete-orphan", order_by="IssueAttachment.created_at"
     )
-    events: Mapped[list["IssueEvent"]] = relationship(
+    events: Mapped[list[IssueEvent]] = relationship(
         back_populates="issue",
         cascade="all, delete-orphan",
         order_by="IssueEvent.created_at",
     )
-    comments: Mapped[list["IssueComment"]] = relationship(
+    comments: Mapped[list[IssueComment]] = relationship(
         back_populates="issue", cascade="all, delete-orphan", order_by="IssueComment.created_at"
     )
-    followers: Mapped[list["IssueFollower"]] = relationship(
+    followers: Mapped[list[IssueFollower]] = relationship(
         back_populates="issue", cascade="all, delete-orphan"
     )
 
@@ -317,9 +317,7 @@ class IssueEvent(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
     issue_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("issues.id", ondelete="CASCADE"), nullable=False
     )
-    event_type: Mapped[IssueEventType] = mapped_column(
-        StringEnum(IssueEventType), nullable=False
-    )
+    event_type: Mapped[IssueEventType] = mapped_column(StringEnum(IssueEventType), nullable=False)
     actor_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -328,9 +326,7 @@ class IssueEvent(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
     from_value: Mapped[str | None] = mapped_column(String(64))
     to_value: Mapped[str | None] = mapped_column(String(64))
     note: Mapped[str | None] = mapped_column(Text)
-    payload: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    payload: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
     is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     issue: Mapped[Issue] = relationship(back_populates="events")
@@ -363,7 +359,7 @@ class IssueComment(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteM
 
 
 class IssueFollower(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
-    """"Me too" / follow relationship.
+    """ "Me too" / follow relationship.
 
     Doubles as the upvote mechanism: ``confirmed`` means the follower says they
     see the same problem, which feeds prioritisation and duplicate merging.

@@ -30,7 +30,7 @@ from civicos.domain.enums import (
     ServiceApplicationStatus,
 )
 from civicos.domain.services import ApplicationEvent, ServiceApplication, ServiceType
-from civicos.schemas.common import Message, Page
+from civicos.schemas.common import Page
 from civicos.schemas.operations import (
     AssetCreateRequest,
     AssetInspectionOut,
@@ -67,7 +67,7 @@ async def create_asset(
         asset.geohash = encode_geohash(payload.latitude, payload.longitude)
     asset.qr_payload = f"civicos:{tenant.slug}:asset:{payload.code}"
     if payload.inspection_interval_days:
-        from datetime import timedelta  # noqa: PLC0415
+        from datetime import timedelta
 
         asset.next_inspection_due = utcnow() + timedelta(days=payload.inspection_interval_days)
 
@@ -76,7 +76,9 @@ async def create_asset(
     return AssetOut.model_validate(asset)
 
 
-@router.get("", response_model=Page[AssetOut], dependencies=[Depends(require_permission(ASSET_READ))])
+@router.get(
+    "", response_model=Page[AssetOut], dependencies=[Depends(require_permission(ASSET_READ))]
+)
 async def list_assets(
     session: SessionDep,
     tenant: TenantDep,
@@ -107,19 +109,23 @@ async def list_assets(
             or_(func.lower(Asset.name).like(term), func.lower(Asset.code).like(term))
         )
 
-    total = int(
-        await session.scalar(select(func.count()).select_from(statement.subquery())) or 0
-    )
+    total = int(await session.scalar(select(func.count()).select_from(statement.subquery())) or 0)
     rows = (
-        await session.scalars(
-            statement.order_by(Asset.code).offset(page.offset).limit(page.limit)
+        (
+            await session.scalars(
+                statement.order_by(Asset.code).offset(page.offset).limit(page.limit)
+            )
         )
-    ).unique().all()
+        .unique()
+        .all()
+    )
     result = PageResult.build([AssetOut.model_validate(row) for row in rows], total, page)
     return Page[AssetOut].model_validate(result.model_dump())
 
 
-@router.get("/nearby", response_model=list[dict], dependencies=[Depends(require_permission(ASSET_READ))])
+@router.get(
+    "/nearby", response_model=list[dict], dependencies=[Depends(require_permission(ASSET_READ))]
+)
 async def nearby_assets(
     session: SessionDep,
     tenant: TenantDep,
@@ -146,9 +152,7 @@ async def nearby_assets(
         for asset in rows
         if asset.latitude is not None and asset.longitude is not None
     ]
-    scored = sorted(
-        (pair for pair in scored if pair[1] <= radius_meters), key=lambda pair: pair[1]
-    )
+    scored = sorted((pair for pair in scored if pair[1] <= radius_meters), key=lambda pair: pair[1])
     return [
         {
             "id": str(asset.id),
@@ -163,9 +167,7 @@ async def nearby_assets(
 
 
 @router.get("/code/{code}", response_model=AssetOut)
-async def get_asset_by_code(
-    code: str, session: SessionDep, tenant: TenantDep
-) -> AssetOut:
+async def get_asset_by_code(code: str, session: SessionDep, tenant: TenantDep) -> AssetOut:
     """Look up an asset by the code stencilled on it (or encoded in its QR)."""
     asset = await session.scalar(
         select(Asset).where(
@@ -191,7 +193,7 @@ async def record_inspection(
     user: CurrentUserDep,
 ) -> AssetInspectionOut:
     """Record a condition assessment and reschedule the next inspection."""
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
     asset = await session.get(Asset, asset_id)
     if asset is None or asset.tenant_id != tenant.id:
@@ -227,9 +229,7 @@ async def record_inspection(
 
 
 @services_router.get("/types", response_model=list[ServiceTypeOut])
-async def list_service_types(
-    session: SessionDep, tenant: TenantDep
-) -> list[ServiceTypeOut]:
+async def list_service_types(session: SessionDep, tenant: TenantDep) -> list[ServiceTypeOut]:
     rows = (
         await session.scalars(
             select(ServiceType)
@@ -252,7 +252,7 @@ async def apply(
     actor: OptionalActorDep,
 ) -> ServiceApplicationOut:
     """Apply for a permit, licence, NOC or certificate."""
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
     service_type = await session.get(ServiceType, payload.service_type_id)
     if service_type is None or service_type.tenant_id != tenant.id:
@@ -277,9 +277,7 @@ async def apply(
         reference=generate_reference(f"{(tenant.slug[:2] or 'sv').upper()}S"),
         service_type_id=service_type.id,
         status=(
-            ServiceApplicationStatus.SUBMITTED
-            if payload.submit
-            else ServiceApplicationStatus.DRAFT
+            ServiceApplicationStatus.SUBMITTED if payload.submit else ServiceApplicationStatus.DRAFT
         ),
         applicant_id=actor.id if actor.kind == "user" else None,
         applicant_name=payload.applicant_name,
@@ -336,16 +334,18 @@ async def list_applications(
     if status_filter:
         statement = statement.where(ServiceApplication.status == status_filter)
 
-    total = int(
-        await session.scalar(select(func.count()).select_from(statement.subquery())) or 0
-    )
+    total = int(await session.scalar(select(func.count()).select_from(statement.subquery())) or 0)
     rows = (
-        await session.scalars(
-            statement.order_by(ServiceApplication.created_at.desc())
-            .offset(page.offset)
-            .limit(page.limit)
+        (
+            await session.scalars(
+                statement.order_by(ServiceApplication.created_at.desc())
+                .offset(page.offset)
+                .limit(page.limit)
+            )
         )
-    ).unique().all()
+        .unique()
+        .all()
+    )
     result = PageResult.build(
         [ServiceApplicationOut.model_validate(row) for row in rows], total, page
     )
@@ -372,7 +372,7 @@ async def decide_application(
     current = application.status
     allowed = SERVICE_TRANSITIONS.get(current, frozenset())
     if payload.status not in allowed:
-        from civicos.core.errors import WorkflowError  # noqa: PLC0415
+        from civicos.core.errors import WorkflowError
 
         raise WorkflowError(
             f"Cannot move an application from '{current.value}' to '{payload.status.value}'.",
@@ -410,14 +410,12 @@ async def decide_application(
         ServiceApplicationStatus.INFO_REQUIRED: "service.info_required",
     }.get(payload.status)
     if template:
-        from civicos.services.notification_service import (  # noqa: PLC0415
+        from civicos.services.notification_service import (
             notify,
             recipient_from_contact,
         )
 
-        recipient = recipient_from_contact(
-            application.applicant_phone, application.applicant_email
-        )
+        recipient = recipient_from_contact(application.applicant_phone, application.applicant_email)
         if recipient is not None:
             await notify(
                 session,

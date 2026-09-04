@@ -67,13 +67,11 @@ async def create_issue(
     Open to anonymous submissions when the deployment allows it - the barrier to
     reporting a broken streetlight should be as close to zero as possible.
     """
-    from civicos.core.config import get_settings  # noqa: PLC0415
+    from civicos.core.config import get_settings
 
     settings = get_settings()
     if not actor.is_authenticated and not settings.security.allow_anonymous_reports:
-        raise PermissionDeniedError(
-            "Sign in to report an issue.", code="authentication_required"
-        )
+        raise PermissionDeniedError("Sign in to report an issue.", code="authentication_required")
 
     # Only staff may hand-set a priority; a resident's urgency is an input to
     # triage, not a decision.
@@ -160,9 +158,7 @@ async def list_issues(
     items, total = await repository.search(
         filters, page, sort_by=sort_by, descending=order == "desc"
     )
-    result = PageResult.build(
-        [IssueSummary.model_validate(issue) for issue in items], total, page
-    )
+    result = PageResult.build([IssueSummary.model_validate(issue) for issue in items], total, page)
     return Page[IssueSummary].model_validate(result.model_dump())
 
 
@@ -175,9 +171,7 @@ async def my_issues(
     items, total = await repository.search(
         IssueFilters(reporter_id=user.id), page, sort_by="created_at"
     )
-    result = PageResult.build(
-        [IssueSummary.model_validate(issue) for issue in items], total, page
-    )
+    result = PageResult.build([IssueSummary.model_validate(issue) for issue in items], total, page)
     return Page[IssueSummary].model_validate(result.model_dump())
 
 
@@ -188,12 +182,12 @@ async def assigned_to_me(
     """The signed-in officer's own work queue."""
     repository = IssueRepository(session, tenant.id)
     items, total = await repository.search(
-        IssueFilters(assigned_to_id=user.id, open_only=True), page, sort_by="resolution_due_at",
+        IssueFilters(assigned_to_id=user.id, open_only=True),
+        page,
+        sort_by="resolution_due_at",
         descending=False,
     )
-    result = PageResult.build(
-        [IssueSummary.model_validate(issue) for issue in items], total, page
-    )
+    result = PageResult.build([IssueSummary.model_validate(issue) for issue in items], total, page)
     return Page[IssueSummary].model_validate(result.model_dump())
 
 
@@ -392,7 +386,7 @@ async def add_comment(
 async def confirm_issue(
     issue_id: uuid.UUID, session: SessionDep, tenant: TenantDep, user: CurrentUserDep
 ) -> Message:
-    """"I see this too." Corroboration drives prioritisation."""
+    """ "I see this too." Corroboration drives prioritisation."""
     issue = await _load(session, tenant.id, issue_id)
     await issue_service.follow(session, issue, user.id, confirmed=True)
     await session.commit()
@@ -433,9 +427,7 @@ async def escalate_issue(
     issue = await _load(session, tenant.id, issue_id)
     await issue_service.escalate(session, tenant, issue, reason=payload.reason, actor=user)
     await session.commit()
-    return Message(
-        message=f"{issue.reference} escalated to level {issue.escalation_level}."
-    )
+    return Message(message=f"{issue.reference} escalated to level {issue.escalation_level}.")
 
 
 @router.post(
@@ -449,7 +441,9 @@ async def upload_attachments(
     tenant: TenantDep,
     actor: OptionalActorDep,
     files: Annotated[list[UploadFile], File(description="Photos or documents.")],
-    stage: Annotated[str, Query(pattern="^(report|before|progress|after|verification)$")] = "report",
+    stage: Annotated[
+        str, Query(pattern="^(report|before|progress|after|verification)$")
+    ] = "report",
     analyse: Annotated[bool, Query(description="Run AI analysis on the images.")] = False,
 ) -> list[AttachmentOut]:
     """Attach evidence to a report, extracting EXIF location and capture time."""
@@ -504,10 +498,7 @@ def _to_detail(issue: Issue, *, include_internal: bool = True) -> IssueDetail:
 
     detail = IssueDetail.model_validate(
         {
-            **{
-                column.key: getattr(issue, column.key)
-                for column in issue.__table__.columns
-            },
+            **{column.key: getattr(issue, column.key) for column in issue.__table__.columns},
             "category": issue.category,
             "department": issue.department,
             "assignee": issue.assignee,
@@ -527,8 +518,7 @@ def _to_detail(issue: Issue, *, include_internal: bool = True) -> IssueDetail:
     detail.comments = [
         IssueCommentOut.model_validate(comment)
         for comment in comments
-        if (include_internal or comment.visibility is Visibility.PUBLIC)
-        and not comment.is_deleted
+        if (include_internal or comment.visibility is Visibility.PUBLIC) and not comment.is_deleted
     ]
     detail.attachments = [AttachmentOut.model_validate(item) for item in attachments]
 
@@ -539,7 +529,7 @@ def _to_detail(issue: Issue, *, include_internal: bool = True) -> IssueDetail:
 
 
 def _sla_payload(issue: Issue) -> dict[str, Any]:
-    from civicos.schemas.issues import SLAOut  # noqa: PLC0415
+    from civicos.schemas.issues import SLAOut
 
     return SLAOut(
         response_due_at=issue.response_due_at,
@@ -553,7 +543,7 @@ def _sla_payload(issue: Issue) -> dict[str, Any]:
 
 
 def _ai_payload(issue: Issue) -> Any:
-    from civicos.schemas.issues import AITriageOut  # noqa: PLC0415
+    from civicos.schemas.issues import AITriageOut
 
     if not issue.ai_triaged_at:
         return None

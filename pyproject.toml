@@ -116,8 +116,17 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S105", "S106", "S311"]
-"src/civicos/db/seed.py" = ["S105", "S106"]
+"tests/*" = ["S105", "S106", "S107", "S311"]
+# `token_type` and `admin_password` are parameter names, not embedded secrets.
+"src/civicos/core/security.py" = ["S105", "S107"]
+"src/civicos/services/auth_service.py" = ["S105", "S106"]
+"src/civicos/schemas/auth.py" = ["S105"]
+"src/civicos/db/seed.py" = ["S105", "S106", "S107"]
+"src/civicos/cli.py" = ["S107"]
+# Urdu, Sindhi and Balochi text, plus typographic dashes, are intentional.
+"src/civicos/core/i18n.py" = ["RUF001"]
+"src/civicos/core/text.py" = ["RUF001", "RUF003"]
+"src/civicos/ai/rag/chunking.py" = ["RUF001"]
 "migrations/*" = ["E501"]
 
 [tool.ruff.lint.isort]
@@ -133,6 +142,8 @@ ignore_missing_imports = true
 exclude = ["migrations/"]
 
 [tool.pytest.ini_options]
+# Import from src/ without requiring an editable install first.
+pythonpath = ["src"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]

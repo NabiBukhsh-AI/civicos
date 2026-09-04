@@ -70,7 +70,7 @@ def _deterministic_briefing(
     Used when AI is unavailable. It is deliberately not a placeholder: an
     administrator still gets the figures that matter, just without prose.
     """
-    from civicos.ai.schemas import BriefingSection  # noqa: PLC0415
+    from civicos.ai.schemas import BriefingSection
 
     totals = statistics.get("totals", {})
     sla = statistics.get("sla", {})
@@ -98,9 +98,7 @@ def _deterministic_briefing(
         )
     ]
     if by_category := statistics.get("top_categories"):
-        listed = ", ".join(
-            f"{item.get('label')} ({item.get('count')})" for item in by_category[:5]
-        )
+        listed = ", ".join(f"{item.get('label')} ({item.get('count')})" for item in by_category[:5])
         sections.append(BriefingSection(heading="Leading categories", body=listed))
     if hotspots := statistics.get("hotspots"):
         listed = ", ".join(
@@ -113,14 +111,10 @@ def _deterministic_briefing(
         key_points=key_points,
         sections=sections,
         risks=(
-            [f"{breached} report(s) past their deadline require escalation."]
-            if breached
-            else []
+            [f"{breached} report(s) past their deadline require escalation."] if breached else []
         ),
         recommended_actions=(
-            ["Review breached reports with the responsible department heads."]
-            if breached
-            else []
+            ["Review breached reports with the responsible department heads."] if breached else []
         ),
         period_label=period_label,
     )

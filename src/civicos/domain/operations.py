@@ -62,9 +62,7 @@ class AuditLog(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
     actor_role: Mapped[str | None] = mapped_column(String(48))
 
     summary: Mapped[str | None] = mapped_column(String(500))
-    before: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    before: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
     after: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
 
     request_id: Mapped[str | None] = mapped_column(String(64))
@@ -129,7 +127,10 @@ class DailyMetric(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
     __tablename__ = "daily_metrics"
     __table_args__ = (
         UniqueConstraint(
-            "tenant_id", "metric_date", "dimension", "dimension_value",
+            "tenant_id",
+            "metric_date",
+            "dimension",
+            "dimension_value",
             name="uq_daily_metrics_scope",
         ),
         Index("ix_daily_metrics_tenant_date", "tenant_id", "metric_date"),
@@ -175,9 +176,7 @@ class SavedView(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixin,
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     resource: Mapped[str] = mapped_column(String(48), default="issues", nullable=False)
-    filters: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    filters: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
     is_shared: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     digest_frequency: Mapped[str | None] = mapped_column(String(16))
     """none | daily | weekly - drives the scheduled digest worker."""

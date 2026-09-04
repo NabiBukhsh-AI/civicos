@@ -85,18 +85,14 @@ class Municipality(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Metadat
     )
 
     #: Feature switches, e.g. ``{"ai_triage": true, "public_map": false}``.
-    features: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    features: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
     #: Per-tenant overrides for SLA behaviour, AI limits, notification defaults.
-    settings: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    settings: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
 
-    admin_units: Mapped[list["AdminUnit"]] = relationship(
+    admin_units: Mapped[list[AdminUnit]] = relationship(
         back_populates="municipality", cascade="all, delete-orphan", lazy="selectin"
     )
-    departments: Mapped[list["Department"]] = relationship(
+    departments: Mapped[list[Department]] = relationship(
         back_populates="municipality", cascade="all, delete-orphan", lazy="selectin"
     )
 
@@ -141,8 +137,8 @@ class AdminUnit(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixin,
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     municipality: Mapped[Municipality] = relationship(back_populates="admin_units")
-    parent: Mapped["AdminUnit | None"] = relationship(remote_side="AdminUnit.id")
-    representatives: Mapped[list["Representative"]] = relationship(
+    parent: Mapped[AdminUnit | None] = relationship(remote_side="AdminUnit.id")
+    representatives: Mapped[list[Representative]] = relationship(
         back_populates="admin_unit", cascade="all, delete-orphan"
     )
 
@@ -151,9 +147,7 @@ class Department(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixin
     """An operational unit that owns categories of work (Sanitation, Water...)."""
 
     __tablename__ = "departments"
-    __table_args__ = (
-        UniqueConstraint("tenant_id", "code", name="uq_departments_tenant_code"),
-    )
+    __table_args__ = (UniqueConstraint("tenant_id", "code", name="uq_departments_tenant_code"),)
 
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
@@ -178,8 +172,8 @@ class Department(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixin
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     municipality: Mapped[Municipality] = relationship(back_populates="departments")
-    head: Mapped["User | None"] = relationship(foreign_keys=[head_user_id], lazy="joined")
-    categories: Mapped[list["IssueCategory"]] = relationship(back_populates="department")
+    head: Mapped[User | None] = relationship(foreign_keys=[head_user_id], lazy="joined")
+    categories: Mapped[list[IssueCategory]] = relationship(back_populates="department")
 
 
 class IssueCategory(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixin, Base):
@@ -224,7 +218,7 @@ class IssueCategory(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMi
     display_order: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
 
     department: Mapped[Department | None] = relationship(back_populates="categories")
-    parent: Mapped["IssueCategory | None"] = relationship(remote_side="IssueCategory.id")
+    parent: Mapped[IssueCategory | None] = relationship(remote_side="IssueCategory.id")
 
 
 class SLAPolicy(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, ActorStampMixin, Base):
@@ -236,9 +230,7 @@ class SLAPolicy(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, ActorStampMixi
 
     __tablename__ = "sla_policies"
     __table_args__ = (
-        UniqueConstraint(
-            "tenant_id", "category_id", "priority", name="uq_sla_policies_scope"
-        ),
+        UniqueConstraint("tenant_id", "category_id", "priority", name="uq_sla_policies_scope"),
     )
 
     name: Mapped[str] = mapped_column(String(120), nullable=False)

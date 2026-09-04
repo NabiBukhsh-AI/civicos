@@ -45,7 +45,7 @@ class RegisterRequest(InputModel):
     language: str | None = Field(default=None, max_length=8)
 
     @model_validator(mode="after")
-    def _require_contact(self) -> "RegisterRequest":
+    def _require_contact(self) -> RegisterRequest:
         if not self.email and not self.phone:
             raise ValueError("Provide an email address or a phone number.")
         return self

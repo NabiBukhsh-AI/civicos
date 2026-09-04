@@ -7,7 +7,7 @@ heuristic provider. Callers ask for a capability, never for a vendor.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import structlog
 
@@ -28,17 +28,17 @@ def _register_defaults() -> None:
         return
 
     def _anthropic() -> LLMProvider:
-        from civicos.ai.providers.anthropic import AnthropicProvider  # noqa: PLC0415
+        from civicos.ai.providers.anthropic import AnthropicProvider
 
         return AnthropicProvider()
 
     def _google() -> LLMProvider:
-        from civicos.ai.providers.google import GoogleProvider  # noqa: PLC0415
+        from civicos.ai.providers.google import GoogleProvider
 
         return GoogleProvider()
 
     def _openai() -> LLMProvider:
-        from civicos.ai.providers.openai import OpenAIProvider  # noqa: PLC0415
+        from civicos.ai.providers.openai import OpenAIProvider
 
         return OpenAIProvider()
 
@@ -68,8 +68,7 @@ def get_provider(name: str) -> LLMProvider:
     factory = _FACTORIES.get(name)
     if factory is None:
         raise ConfigurationError(
-            f"Unknown AI provider '{name}'. Known providers: "
-            f"{', '.join(sorted(_FACTORIES))}.",
+            f"Unknown AI provider '{name}'. Known providers: {', '.join(sorted(_FACTORIES))}.",
             code="unknown_ai_provider",
         )
     provider = factory()

@@ -10,7 +10,8 @@ constructor and applies it unconditionally.
 from __future__ import annotations
 
 import uuid
-from typing import Any, Generic, Sequence, TypeVar
+from collections.abc import Sequence
+from typing import Any, Generic, TypeVar
 
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,8 +41,12 @@ class TenantRepository(Generic[ModelT]):
         return statement
 
     def count_query(self, *, include_deleted: bool = False) -> Select[Any]:
-        statement = select(func.count()).select_from(self.model).where(
-            self.model.tenant_id == self.tenant_id  # type: ignore[attr-defined]
+        statement = (
+            select(func.count())
+            .select_from(self.model)
+            .where(
+                self.model.tenant_id == self.tenant_id  # type: ignore[attr-defined]
+            )
         )
         if not include_deleted and hasattr(self.model, "deleted_at"):
             statement = statement.where(self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
@@ -107,7 +112,7 @@ class TenantRepository(Generic[ModelT]):
         return entity
 
     async def soft_delete(self, entity: ModelT) -> ModelT:
-        from civicos.core.clock import utcnow  # noqa: PLC0415
+        from civicos.core.clock import utcnow
 
         if not hasattr(entity, "deleted_at"):
             raise TypeError(f"{type(entity).__name__} does not support soft deletion")

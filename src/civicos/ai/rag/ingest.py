@@ -91,9 +91,7 @@ async def ingest_document(
         )
 
     # Replace rather than append, so re-indexing is idempotent.
-    await session.execute(
-        delete(DocumentChunk).where(DocumentChunk.document_id == document.id)
-    )
+    await session.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document.id))
 
     embedding_model = "unknown"
     total_tokens = 0
@@ -166,7 +164,7 @@ async def index_text(
     usage: UsageContext | None = None,
 ) -> IngestResult:
     """Index text that did not arrive as a file (a pasted notice, a web page)."""
-    from civicos.ai.rag.chunking import chunk_text  # noqa: PLC0415
+    from civicos.ai.rag.chunking import chunk_text
 
     chunks = chunk_text(text)
     if not chunks:
@@ -175,9 +173,7 @@ async def index_text(
         await session.flush()
         return IngestResult(document.id, 0, 0, None, DocumentStatus.FAILED, "Empty document.")
 
-    await session.execute(
-        delete(DocumentChunk).where(DocumentChunk.document_id == document.id)
-    )
+    await session.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document.id))
     embeddings = await run_embedding([chunk.content for chunk in chunks], usage=usage)
     for chunk, vector in zip(chunks, embeddings.vectors, strict=False):
         session.add(

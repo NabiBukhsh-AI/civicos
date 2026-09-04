@@ -8,15 +8,16 @@ threading arguments through every call site.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Any
 
 _request_id: ContextVar[str | None] = ContextVar("civicos_request_id", default=None)
 _tenant_id: ContextVar[uuid.UUID | None] = ContextVar("civicos_tenant_id", default=None)
 _tenant_slug: ContextVar[str | None] = ContextVar("civicos_tenant_slug", default=None)
-_actor: ContextVar["Actor | None"] = ContextVar("civicos_actor", default=None)
+_actor: ContextVar[Actor | None] = ContextVar("civicos_actor", default=None)
 _language: ContextVar[str] = ContextVar("civicos_language", default="en")
 
 

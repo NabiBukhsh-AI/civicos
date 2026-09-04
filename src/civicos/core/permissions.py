@@ -169,11 +169,7 @@ _REPRESENTATIVE_PERMISSIONS = _ANALYST_PERMISSIONS | {
 }
 
 _TENANT_ADMIN_PERMISSIONS = frozenset(
-    {
-        perm(resource, _ALL)
-        for resource in Resource
-        if resource is not Resource.TENANT
-    }
+    {perm(resource, _ALL) for resource in Resource if resource is not Resource.TENANT}
 ) | {
     perm(Resource.TENANT, "read"),
     perm(Resource.TENANT, "update"),

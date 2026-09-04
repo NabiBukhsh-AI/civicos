@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
-
-from dataclasses import asdict
 
 from civicos.api.deps import (
     ActorDep,
@@ -52,7 +51,7 @@ async def register(
     tenant: TenantDep,
 ) -> TokenResponse:
     """Self-registration for residents."""
-    user = await auth_service.register(
+    await auth_service.register(
         session,
         tenant,
         full_name=payload.full_name,
@@ -98,9 +97,7 @@ async def login(
 
 
 @router.post("/otp/request", response_model=Message)
-async def request_otp(
-    payload: OTPRequest, session: SessionDep, tenant: TenantDep
-) -> Message:
+async def request_otp(payload: OTPRequest, session: SessionDep, tenant: TenantDep) -> Message:
     """Send a one-time code.
 
     The response is deliberately identical whether or not an account exists, so
@@ -110,9 +107,7 @@ async def request_otp(
         session, tenant, payload.target, purpose=payload.purpose
     )
     recipient = (
-        Recipient(phone=entry.target)
-        if "@" not in entry.target
-        else Recipient(email=entry.target)
+        Recipient(phone=entry.target) if "@" not in entry.target else Recipient(email=entry.target)
     )
     await notify(
         session,
@@ -148,18 +143,14 @@ async def verify_otp(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(
-    payload: RefreshRequest, session: SessionDep, tenant: TenantDep
-) -> TokenResponse:
+async def refresh(payload: RefreshRequest, session: SessionDep, tenant: TenantDep) -> TokenResponse:
     result = await auth_service.refresh_tokens(session, tenant, payload.refresh_token)
     await session.commit()
     return TokenResponse(**asdict(result.tokens))
 
 
 @router.post("/logout", response_model=Message)
-async def logout(
-    payload: RefreshRequest, session: SessionDep, tenant: TenantDep
-) -> Message:
+async def logout(payload: RefreshRequest, session: SessionDep, tenant: TenantDep) -> Message:
     revoked = await auth_service.sign_out(session, payload.refresh_token)
     await session.commit()
     return Message(message="Signed out.", detail=f"{revoked} session(s) revoked.")
@@ -282,9 +273,7 @@ async def create_api_key(
         created_by_user_id=user.id,
     )
     await session.commit()
-    return ApiKeyCreatedOut(
-        **ApiKeyOut.model_validate(api_key).model_dump(), api_key=plaintext
-    )
+    return ApiKeyCreatedOut(**ApiKeyOut.model_validate(api_key).model_dump(), api_key=plaintext)
 
 
 @router.delete(
@@ -295,11 +284,11 @@ async def create_api_key(
 async def revoke_api_key(
     key_id: Annotated[uuid.UUID, ...], session: SessionDep, tenant: TenantDep
 ) -> Message:
-    from civicos.domain.identity import ApiKey  # noqa: PLC0415
+    from civicos.domain.identity import ApiKey
 
     api_key = await session.get(ApiKey, key_id)
     if api_key is None or api_key.tenant_id != tenant.id:
-        from civicos.core.errors import NotFoundError  # noqa: PLC0415
+        from civicos.core.errors import NotFoundError
 
         raise NotFoundError("API key not found.", code="api_key_not_found")
     await auth_service.revoke_api_key(session, api_key)

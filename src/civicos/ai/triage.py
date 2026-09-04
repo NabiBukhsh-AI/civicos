@@ -102,7 +102,7 @@ async def triage_report(
 
 def _fallback(title: str, description: str, valid_slugs: set[str]) -> TriageResult:
     """Rule-based triage used when the model output cannot be trusted."""
-    from civicos.ai.providers.heuristic import classify  # noqa: PLC0415
+    from civicos.ai.providers.heuristic import classify
 
     slug, priority, severity, matched = classify(f"{title} {description}")
     if slug not in valid_slugs:

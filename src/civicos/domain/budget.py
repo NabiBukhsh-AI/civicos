@@ -55,7 +55,7 @@ class BudgetPeriod(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
     is_current: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    lines: Mapped[list["BudgetLine"]] = relationship(
+    lines: Mapped[list[BudgetLine]] = relationship(
         back_populates="period", cascade="all, delete-orphan"
     )
 
@@ -95,7 +95,7 @@ class BudgetLine(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixin
     notes: Mapped[str | None] = mapped_column(Text)
 
     period: Mapped[BudgetPeriod] = relationship(back_populates="lines")
-    expenditures: Mapped[list["Expenditure"]] = relationship(
+    expenditures: Mapped[list[Expenditure]] = relationship(
         back_populates="budget_line", cascade="all, delete-orphan"
     )
 

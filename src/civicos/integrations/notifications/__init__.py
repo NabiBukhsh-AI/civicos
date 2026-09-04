@@ -101,9 +101,7 @@ class TwilioSmsChannel(Channel):
         self.from_number = from_number
 
     async def send(self, envelope: Envelope) -> DeliveryResult:
-        url = (
-            f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
-        )
+        url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 response = await client.post(
@@ -245,9 +243,7 @@ class Dispatcher:
     def __init__(self, channels: dict[NotificationChannel, Channel]) -> None:
         self.channels = channels
 
-    async def send(
-        self, channel: NotificationChannel, envelope: Envelope
-    ) -> DeliveryResult:
+    async def send(self, channel: NotificationChannel, envelope: Envelope) -> DeliveryResult:
         implementation = self.channels.get(channel)
         if implementation is None:
             return DeliveryResult(
@@ -256,14 +252,14 @@ class Dispatcher:
         result = await implementation.send(envelope)
         NOTIFICATIONS_SENT.labels(
             channel=str(channel),
-            outcome="suppressed" if result.suppressed else ("sent" if result.delivered else "failed"),
+            outcome="suppressed"
+            if result.suppressed
+            else ("sent" if result.delivered else "failed"),
         ).inc()
         return result
 
     async def health(self) -> dict[str, bool]:
-        return {
-            str(name): await channel.health() for name, channel in self.channels.items()
-        }
+        return {str(name): await channel.health() for name, channel in self.channels.items()}
 
 
 _dispatcher: Dispatcher | None = None
@@ -317,9 +313,7 @@ def get_dispatcher() -> Dispatcher:
         channels[NotificationChannel.WHATSAPP] = DisabledChannel("whatsapp")
 
     channels[NotificationChannel.PUSH] = (
-        ConsoleChannel("push")
-        if config.push_backend == "console"
-        else DisabledChannel("push")
+        ConsoleChannel("push") if config.push_backend == "console" else DisabledChannel("push")
     )
     if config.webhook_url:
         channels[NotificationChannel.WEBHOOK] = WebhookChannel(config.webhook_url)

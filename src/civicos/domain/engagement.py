@@ -76,9 +76,7 @@ class Announcement(
         Uuid(as_uuid=True), ForeignKey("departments.id", ondelete="SET NULL")
     )
     #: Empty means town-wide.
-    admin_unit_ids: Mapped[list[Any]] = mapped_column(
-        MutableJSONList, default=list, nullable=False
-    )
+    admin_unit_ids: Mapped[list[Any]] = mapped_column(MutableJSONList, default=list, nullable=False)
 
     visibility: Mapped[Visibility] = mapped_column(
         StringEnum(Visibility), default=Visibility.PUBLIC, nullable=False
@@ -137,9 +135,7 @@ class EmergencyAlert(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataM
         StringEnum(AlertCategory), default=AlertCategory.OTHER, nullable=False
     )
 
-    admin_unit_ids: Mapped[list[Any]] = mapped_column(
-        MutableJSONList, default=list, nullable=False
-    )
+    admin_unit_ids: Mapped[list[Any]] = mapped_column(MutableJSONList, default=list, nullable=False)
     centre_latitude: Mapped[float | None] = mapped_column(Coordinate)
     centre_longitude: Mapped[float | None] = mapped_column(Coordinate)
     radius_meters: Mapped[int | None] = mapped_column(Integer)
@@ -179,9 +175,7 @@ class Survey(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteMixin, 
     status: Mapped[SurveyStatus] = mapped_column(
         StringEnum(SurveyStatus), default=SurveyStatus.DRAFT, nullable=False
     )
-    admin_unit_ids: Mapped[list[Any]] = mapped_column(
-        MutableJSONList, default=list, nullable=False
-    )
+    admin_unit_ids: Mapped[list[Any]] = mapped_column(MutableJSONList, default=list, nullable=False)
     opens_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     closes_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     is_anonymous: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -193,13 +187,13 @@ class Survey(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteMixin, 
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
     )
 
-    questions: Mapped[list["SurveyQuestion"]] = relationship(
+    questions: Mapped[list[SurveyQuestion]] = relationship(
         back_populates="survey",
         cascade="all, delete-orphan",
         order_by="SurveyQuestion.display_order",
         lazy="selectin",
     )
-    responses: Mapped[list["SurveyResponse"]] = relationship(
+    responses: Mapped[list[SurveyResponse]] = relationship(
         back_populates="survey", cascade="all, delete-orphan"
     )
 
@@ -256,9 +250,7 @@ class SurveyResponse(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
         Uuid(as_uuid=True), ForeignKey("admin_units.id", ondelete="SET NULL")
     )
     #: ``{question_id: answer}``
-    answers: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    answers: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
     sentiment: Mapped[Sentiment | None] = mapped_column(StringEnum(Sentiment))
 
     survey: Mapped[Survey] = relationship(back_populates="responses")

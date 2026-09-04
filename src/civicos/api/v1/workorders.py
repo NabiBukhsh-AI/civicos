@@ -98,7 +98,7 @@ async def list_work_orders(
     overdue_only: Annotated[bool, Query()] = False,
     open_only: Annotated[bool, Query()] = False,
 ) -> Page[WorkOrderSummary]:
-    from civicos.core.clock import utcnow  # noqa: PLC0415
+    from civicos.core.clock import utcnow
 
     statement = select(WorkOrder).where(
         WorkOrder.tenant_id == tenant.id, WorkOrder.deleted_at.is_(None)
@@ -128,23 +128,21 @@ async def list_work_orders(
             )
         )
     if overdue_only:
-        statement = statement.where(
-            WorkOrder.due_at.is_not(None), WorkOrder.due_at < utcnow()
-        )
+        statement = statement.where(WorkOrder.due_at.is_not(None), WorkOrder.due_at < utcnow())
 
-    total = int(
-        await session.scalar(select(func.count()).select_from(statement.subquery())) or 0
-    )
+    total = int(await session.scalar(select(func.count()).select_from(statement.subquery())) or 0)
     rows = (
-        await session.scalars(
-            statement.order_by(WorkOrder.created_at.desc())
-            .offset(page.offset)
-            .limit(page.limit)
+        (
+            await session.scalars(
+                statement.order_by(WorkOrder.created_at.desc())
+                .offset(page.offset)
+                .limit(page.limit)
+            )
         )
-    ).unique().all()
-    result = PageResult.build(
-        [WorkOrderSummary.model_validate(row) for row in rows], total, page
+        .unique()
+        .all()
     )
+    result = PageResult.build([WorkOrderSummary.model_validate(row) for row in rows], total, page)
     return Page[WorkOrderSummary].model_validate(result.model_dump())
 
 
@@ -154,23 +152,27 @@ async def my_work_orders(
 ) -> list[WorkOrderSummary]:
     """The field worker's job list for today, soonest deadline first."""
     rows = (
-        await session.scalars(
-            select(WorkOrder)
-            .where(
-                WorkOrder.tenant_id == tenant.id,
-                WorkOrder.deleted_at.is_(None),
-                WorkOrder.assigned_to_id == user.id,
-                WorkOrder.status.not_in(
-                    [
-                        WorkOrderStatus.COMPLETED,
-                        WorkOrderStatus.VERIFIED,
-                        WorkOrderStatus.CANCELLED,
-                    ]
-                ),
+        (
+            await session.scalars(
+                select(WorkOrder)
+                .where(
+                    WorkOrder.tenant_id == tenant.id,
+                    WorkOrder.deleted_at.is_(None),
+                    WorkOrder.assigned_to_id == user.id,
+                    WorkOrder.status.not_in(
+                        [
+                            WorkOrderStatus.COMPLETED,
+                            WorkOrderStatus.VERIFIED,
+                            WorkOrderStatus.CANCELLED,
+                        ]
+                    ),
+                )
+                .order_by(WorkOrder.due_at.asc().nullslast(), WorkOrder.priority.desc())
             )
-            .order_by(WorkOrder.due_at.asc().nullslast(), WorkOrder.priority.desc())
         )
-    ).unique().all()
+        .unique()
+        .all()
+    )
     return [WorkOrderSummary.model_validate(row) for row in rows]
 
 
@@ -300,9 +302,7 @@ crews_router = APIRouter(prefix="/crews", tags=["Work Orders"])
     response_model=dict,
     dependencies=[Depends(require_permission(READ))],
 )
-async def crew_workload(
-    crew_id: uuid.UUID, session: SessionDep, tenant: TenantDep
-) -> dict:
+async def crew_workload(crew_id: uuid.UUID, session: SessionDep, tenant: TenantDep) -> dict:
     return await workorder_service.crew_workload(session, tenant.id, crew_id)
 
 
@@ -331,14 +331,14 @@ async def create_crew(
     session.add(crew)
     await session.flush()
     for member_id in payload.member_ids:
-        session.add(
-            CrewMember(tenant_id=tenant.id, crew_id=crew.id, user_id=member_id)
-        )
+        session.add(CrewMember(tenant_id=tenant.id, crew_id=crew.id, user_id=member_id))
     await session.commit()
     return CrewOut.model_validate(crew)
 
 
-@crews_router.get("", response_model=list[CrewOut], dependencies=[Depends(require_permission(READ))])
+@crews_router.get(
+    "", response_model=list[CrewOut], dependencies=[Depends(require_permission(READ))]
+)
 async def list_crews(
     session: SessionDep,
     tenant: TenantDep,
@@ -356,9 +356,7 @@ async def list_crews(
     response_model=Message,
     dependencies=[Depends(require_permission(perm(Resource.WORK_ORDER, "update")))],
 )
-async def deactivate_crew(
-    crew_id: uuid.UUID, session: SessionDep, tenant: TenantDep
-) -> Message:
+async def deactivate_crew(crew_id: uuid.UUID, session: SessionDep, tenant: TenantDep) -> Message:
     crew = await session.get(Crew, crew_id)
     if crew is None or crew.tenant_id != tenant.id:
         raise NotFoundError("Crew not found.", code="crew_not_found")
@@ -368,7 +366,7 @@ async def deactivate_crew(
 
 
 async def _load(session, tenant_id: uuid.UUID, order_id: uuid.UUID) -> WorkOrder:
-    from sqlalchemy.orm import selectinload  # noqa: PLC0415
+    from sqlalchemy.orm import selectinload
 
     order = await session.scalar(
         select(WorkOrder)

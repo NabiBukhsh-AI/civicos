@@ -119,15 +119,13 @@ class S3Storage(StorageBackend):
         if self._client is not None:
             return self._client
         try:
-            import boto3  # noqa: PLC0415
+            import boto3
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise ConfigurationError(
                 "S3 storage requires boto3. Install it with: pip install 'civicos[storage]'",
                 code="boto3_missing",
             ) from exc
-        self._client = boto3.client(
-            "s3", region_name=self.region, endpoint_url=self.endpoint_url
-        )
+        self._client = boto3.client("s3", region_name=self.region, endpoint_url=self.endpoint_url)
         return self._client
 
     async def save(
@@ -166,9 +164,7 @@ class S3Storage(StorageBackend):
     async def load(self, key: str) -> bytes:
         client = self._get_client()
         try:
-            response = await asyncio.to_thread(
-                client.get_object, Bucket=self.bucket, Key=key
-            )
+            response = await asyncio.to_thread(client.get_object, Bucket=self.bucket, Key=key)
         except Exception as exc:
             raise NotFoundError("Stored file not found.", code="file_not_found") from exc
         return await asyncio.to_thread(response["Body"].read)

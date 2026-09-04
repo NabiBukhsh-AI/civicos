@@ -189,9 +189,7 @@ async def get_or_create_conversation(
     return conversation
 
 
-async def _load_history(
-    session: AsyncSession, conversation: Conversation
-) -> list[Message]:
+async def _load_history(session: AsyncSession, conversation: Conversation) -> list[Message]:
     rows = (
         await session.scalars(
             select(ConversationMessage)

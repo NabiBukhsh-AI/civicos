@@ -59,9 +59,7 @@ class ImageMetadata:
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
-        payload["captured_at"] = (
-            self.captured_at.isoformat() if self.captured_at else None
-        )
+        payload["captured_at"] = self.captured_at.isoformat() if self.captured_at else None
         payload.pop("raw", None)
         return payload
 
@@ -71,7 +69,7 @@ def extract_metadata(data: bytes, filename: str = "image") -> ImageMetadata:
     metadata = ImageMetadata(filename=filename)
 
     try:
-        import exifread  # noqa: PLC0415
+        import exifread
     except ImportError:  # pragma: no cover - optional at runtime
         metadata.warnings.append("EXIF library unavailable.")
         _fill_dimensions(metadata, data)
@@ -114,12 +112,8 @@ def extract_batch(images: list[tuple[bytes, str]]) -> list[ImageMetadata]:
 
 
 def _read_gps(tags: dict[str, Any], metadata: ImageMetadata) -> None:
-    latitude = _to_degrees(
-        tags.get("GPS GPSLatitude"), _tag_str(tags.get("GPS GPSLatitudeRef"))
-    )
-    longitude = _to_degrees(
-        tags.get("GPS GPSLongitude"), _tag_str(tags.get("GPS GPSLongitudeRef"))
-    )
+    latitude = _to_degrees(tags.get("GPS GPSLatitude"), _tag_str(tags.get("GPS GPSLatitudeRef")))
+    longitude = _to_degrees(tags.get("GPS GPSLongitude"), _tag_str(tags.get("GPS GPSLongitudeRef")))
 
     if latitude is None or longitude is None:
         metadata.warnings.append("No GPS coordinates in EXIF.")
@@ -241,7 +235,7 @@ def _tag_str(tag: Any) -> str | None:
 def _fill_dimensions(metadata: ImageMetadata, data: bytes) -> None:
     """Fall back to decoding the header for width/height."""
     try:
-        from PIL import Image  # noqa: PLC0415
+        from PIL import Image
 
         with Image.open(io.BytesIO(data)) as image:
             metadata.width, metadata.height = image.size
@@ -258,7 +252,7 @@ def location_consistency(
     photograph a blocked drain from across the road. It surfaces a flag for a
     human, which is the only defensible use of this signal.
     """
-    from civicos.core.geo import haversine_meters  # noqa: PLC0415
+    from civicos.core.geo import haversine_meters
 
     if reported is None or not photo_points:
         return {"checked": False, "consistent": None, "max_distance_m": None}

@@ -9,8 +9,9 @@ record. A resident's complaint is never lost because a model timed out.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 import structlog
 from sqlalchemy import select
@@ -26,7 +27,7 @@ from civicos.core.errors import PermissionDeniedError, ValidationError, Workflow
 from civicos.core.geo import Point, encode_geohash, is_valid_coordinate
 from civicos.core.i18n import translate
 from civicos.core.security import generate_reference
-from civicos.core.telemetry import ISSUES_CREATED, ISSUE_TRANSITIONS
+from civicos.core.telemetry import ISSUE_TRANSITIONS, ISSUES_CREATED
 from civicos.core.text import guess_language, normalise_whitespace, summarise_for_title, truncate
 from civicos.domain.enums import (
     ISSUE_TRANSITIONS as ALLOWED_TRANSITIONS,
@@ -129,9 +130,7 @@ async def report_issue(
     language = draft.language or guess_language(description, tenant.default_language)
 
     # 1. Hygiene pass. Always runs; cheap, deterministic and never blocks intake.
-    moderation = await moderate_text(
-        description, usage=usage, use_model=run_ai and is_ai_enabled()
-    )
+    moderation = await moderate_text(description, usage=usage, use_model=run_ai and is_ai_enabled())
     stored_description = moderation.redacted_text or description
     if moderation.contains_personal_data:
         warnings.append("Personal details were removed from the public description.")
@@ -181,7 +180,9 @@ async def report_issue(
         extra=draft.extra,
         is_flagged=moderation.is_abusive or not moderation.is_acceptable,
         flag_reason=moderation.reason,
-        visibility=Visibility.PUBLIC if tenant.feature_enabled("public_issues") else Visibility.INTERNAL,
+        visibility=Visibility.PUBLIC
+        if tenant.feature_enabled("public_issues")
+        else Visibility.INTERNAL,
     )
     session.add(issue)
     await session.flush()
@@ -200,9 +201,7 @@ async def report_issue(
     ai_applied = False
 
     if run_ai and tenant.feature_enabled("ai_triage"):
-        ai_applied, category = await _apply_triage(
-            session, tenant, issue, category, usage=usage
-        )
+        ai_applied, category = await _apply_triage(session, tenant, issue, category, usage=usage)
 
     verdict = await duplicate_service.find_duplicates(
         session,
@@ -231,7 +230,7 @@ async def report_issue(
             merged_into=target,
             duplicate_candidates=[_candidate_payload(c) for c in verdict.candidates],
             ai_applied=ai_applied,
-            warnings=warnings + [f"Merged into existing report {target.reference}."],
+            warnings=[*warnings, f"Merged into existing report {target.reference}."],
         )
 
     if verdict.best is not None and verdict.best.needs_review:
@@ -251,6 +250,10 @@ async def report_issue(
     issue.category_id = category.id if category else None
     issue.department_id = decision.department_id
     issue.admin_unit_id = decision.admin_unit_id
+    # Populate the relationships too: we already hold these objects, and doing
+    # so means nothing downstream has to lazy-load them off a live session.
+    if category is not None:
+        issue.category = category
 
     if category is not None and draft.priority is None and not ai_applied:
         issue.priority = category.default_priority
@@ -258,10 +261,10 @@ async def report_issue(
         issue.priority = Priority.EMERGENCY
 
     department = (
-        await session.get(Department, decision.department_id)
-        if decision.department_id
-        else None
+        await session.get(Department, decision.department_id) if decision.department_id else None
     )
+    if department is not None:
+        issue.department = department
     targets = await sla_service.compute_targets(
         session,
         tenant.id,
@@ -441,7 +444,9 @@ async def assign(
     """Assign an issue to a member of staff and advance it if it was untriaged."""
     assignee = await session.get(User, assignee_id)
     if assignee is None or assignee.tenant_id != tenant.id:
-        raise ValidationError("That user does not belong to this municipality.", code="bad_assignee")
+        raise ValidationError(
+            "That user does not belong to this municipality.", code="bad_assignee"
+        )
 
     await _assign(session, issue, assignee_id, note=note, actor=actor)
     if issue.status in {IssueStatus.SUBMITTED, IssueStatus.TRIAGED, IssueStatus.ACKNOWLEDGED}:
@@ -591,9 +596,7 @@ async def escalate(
     """Raise an issue up the department's escalation chain."""
     issue.escalation_level += 1
     issue.escalated_at = utcnow()
-    department = (
-        await session.get(Department, issue.department_id) if issue.department_id else None
-    )
+    department = await session.get(Department, issue.department_id) if issue.department_id else None
     targets = sla_service.escalation_targets(department, issue.escalation_level)
 
     await _add_event(
@@ -626,7 +629,7 @@ async def escalate(
 async def follow(
     session: AsyncSession, issue: Issue, user_id: uuid.UUID, *, confirmed: bool = True
 ) -> IssueFollower:
-    """"Me too" - the corroboration signal that drives prioritisation."""
+    """ "Me too" - the corroboration signal that drives prioritisation."""
     follower = await _follow(session, issue, user_id, confirmed=confirmed)
     await session.flush()
     return follower
@@ -693,9 +696,7 @@ async def _apply_triage(
 
     # A human-chosen category always wins over the model's.
     if category is None:
-        category = await routing_service.match_category(
-            session, tenant.id, result.category_slug
-        )
+        category = await routing_service.match_category(session, tenant.id, result.category_slug)
     if issue.severity is None:
         issue.severity = Severity(result.severity)
     if result.is_emergency:
@@ -824,9 +825,7 @@ async def _add_event(
         event_type=event_type,
         actor_id=actor.id if actor else current.id,
         actor_label=(
-            actor.display()
-            if actor
-            else (current.display_name or current.email or current.kind)
+            actor.display() if actor else (current.display_name or current.email or current.kind)
         ),
         from_value=from_value,
         to_value=to_value,

@@ -87,9 +87,7 @@ async def dashboard(
 async def _issue_totals(
     session: AsyncSession, tenant_id: uuid.UUID, since: datetime
 ) -> dict[str, Any]:
-    created = await _count(
-        session, Issue, tenant_id, Issue.created_at >= since
-    )
+    created = await _count(session, Issue, tenant_id, Issue.created_at >= since)
     resolved = await _count(
         session, Issue, tenant_id, Issue.resolved_at.is_not(None), Issue.resolved_at >= since
     )
@@ -111,7 +109,7 @@ async def _issue_totals(
         Issue.status.in_([s for s in IssueStatus if s.is_open]),
     )
 
-    from civicos.repositories.issues import IssueRepository  # noqa: PLC0415
+    from civicos.repositories.issues import IssueRepository
 
     stats = await IssueRepository(session, tenant_id).resolution_stats(since)
     return {
@@ -464,7 +462,7 @@ async def service_summary(
 async def ai_summary(
     session: AsyncSession, tenant_id: uuid.UUID, *, days: int = 30
 ) -> dict[str, Any]:
-    from civicos.ai.usage import tenant_usage_summary  # noqa: PLC0415
+    from civicos.ai.usage import tenant_usage_summary
 
     return await tenant_usage_summary(session, tenant_id, days=days)
 
@@ -481,7 +479,9 @@ async def rollup_day(
     start = datetime.combine(target, datetime.min.time()).replace(tzinfo=utcnow().tzinfo)
     end = start + timedelta(days=1)
 
-    created = await _count(session, Issue, tenant_id, Issue.created_at >= start, Issue.created_at < end)
+    created = await _count(
+        session, Issue, tenant_id, Issue.created_at >= start, Issue.created_at < end
+    )
     resolved = await _count(
         session, Issue, tenant_id, Issue.resolved_at >= start, Issue.resolved_at < end
     )

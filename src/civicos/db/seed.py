@@ -44,80 +44,160 @@ logger = structlog.get_logger(__name__)
 
 #: code -> (name, description)
 DEFAULT_DEPARTMENTS: tuple[tuple[str, str, str], ...] = (
-    ("sanitation", "Sanitation & Solid Waste", "Street sweeping, waste collection, transfer stations."),
+    (
+        "sanitation",
+        "Sanitation & Solid Waste",
+        "Street sweeping, waste collection, transfer stations.",
+    ),
     ("water-sanitation", "Water & Sewerage", "Water supply, sewerage, drainage and pumping."),
     ("works", "Public Works", "Roads, footpaths, street lighting and municipal buildings."),
     ("parks-horticulture", "Parks & Horticulture", "Parks, playgrounds, trees and green spaces."),
-    ("public-health", "Public Health", "Vector control, food safety, animal control, dispensaries."),
-    ("enforcement", "Enforcement & Building Control", "Encroachment, illegal construction, licensing."),
+    (
+        "public-health",
+        "Public Health",
+        "Vector control, food safety, animal control, dispensaries.",
+    ),
+    (
+        "enforcement",
+        "Enforcement & Building Control",
+        "Encroachment, illegal construction, licensing.",
+    ),
     ("emergency-services", "Emergency Services", "Fire, rescue and disaster response."),
-    ("administration", "Administration", "Records, revenue, procurement and general administration."),
+    (
+        "administration",
+        "Administration",
+        "Records, revenue, procurement and general administration.",
+    ),
 )
 
 #: slug, name, department, default priority, emergency?, keywords
 DEFAULT_CATEGORIES: tuple[tuple[str, str, str, Priority, bool, tuple[str, ...]], ...] = (
     (
-        "solid-waste", "Waste not collected", "sanitation", Priority.NORMAL, False,
+        "solid-waste",
+        "Waste not collected",
+        "sanitation",
+        Priority.NORMAL,
+        False,
         ("garbage", "trash", "rubbish", "waste", "bin", "dump", "litter", "refuse"),
     ),
     (
-        "street-sweeping", "Street not swept", "sanitation", Priority.LOW, False,
+        "street-sweeping",
+        "Street not swept",
+        "sanitation",
+        Priority.LOW,
+        False,
         ("sweeping", "dirty street", "dust", "debris"),
     ),
     (
-        "sewerage", "Sewerage overflow / blockage", "water-sanitation", Priority.HIGH, False,
+        "sewerage",
+        "Sewerage overflow / blockage",
+        "water-sanitation",
+        Priority.HIGH,
+        False,
         ("sewer", "sewage", "gutter", "manhole", "overflow", "blocked drain", "smell"),
     ),
     (
-        "water-supply", "Water supply problem", "water-sanitation", Priority.HIGH, False,
+        "water-supply",
+        "Water supply problem",
+        "water-sanitation",
+        Priority.HIGH,
+        False,
         ("no water", "water supply", "low pressure", "pipeline", "leak", "tanker", "contaminated"),
     ),
     (
-        "drainage", "Drainage / flooding", "water-sanitation", Priority.HIGH, False,
+        "drainage",
+        "Drainage / flooding",
+        "water-sanitation",
+        Priority.HIGH,
+        False,
         ("drain", "flood", "waterlogging", "standing water", "rain water", "storm drain"),
     ),
     (
-        "roads", "Road / footpath damage", "works", Priority.NORMAL, False,
+        "roads",
+        "Road / footpath damage",
+        "works",
+        Priority.NORMAL,
+        False,
         ("pothole", "road", "footpath", "pavement", "broken road", "speed breaker", "kerb"),
     ),
     (
-        "streetlights", "Street light fault", "works", Priority.NORMAL, False,
+        "streetlights",
+        "Street light fault",
+        "works",
+        Priority.NORMAL,
+        False,
         ("streetlight", "street light", "lamp", "pole", "dark", "bulb", "not working"),
     ),
     (
-        "public-buildings", "Municipal building issue", "works", Priority.NORMAL, False,
+        "public-buildings",
+        "Municipal building issue",
+        "works",
+        Priority.NORMAL,
+        False,
         ("building", "office", "school building", "toilet block", "community centre"),
     ),
     (
-        "parks", "Park / green space issue", "parks-horticulture", Priority.LOW, False,
+        "parks",
+        "Park / green space issue",
+        "parks-horticulture",
+        Priority.LOW,
+        False,
         ("park", "playground", "tree", "green belt", "grass", "bench", "swing"),
     ),
     (
-        "public-health", "Public health hazard", "public-health", Priority.HIGH, False,
+        "public-health",
+        "Public health hazard",
+        "public-health",
+        Priority.HIGH,
+        False,
         ("mosquito", "dengue", "fogging", "spray", "disease", "unhygienic", "food"),
     ),
     (
-        "animal-control", "Stray or dead animal", "public-health", Priority.NORMAL, False,
+        "animal-control",
+        "Stray or dead animal",
+        "public-health",
+        Priority.NORMAL,
+        False,
         ("stray", "dog", "animal", "cattle", "dead animal", "bite"),
     ),
     (
-        "sanitation", "Public toilet / sanitation", "public-health", Priority.NORMAL, False,
+        "sanitation",
+        "Public toilet / sanitation",
+        "public-health",
+        Priority.NORMAL,
+        False,
         ("toilet", "washroom", "latrine", "sanitation block"),
     ),
     (
-        "encroachment", "Encroachment / illegal construction", "enforcement", Priority.NORMAL, False,
+        "encroachment",
+        "Encroachment / illegal construction",
+        "enforcement",
+        Priority.NORMAL,
+        False,
         ("encroach", "illegal construction", "occupied", "kiosk", "extension", "unauthorised"),
     ),
     (
-        "noise", "Noise nuisance", "enforcement", Priority.LOW, False,
+        "noise",
+        "Noise nuisance",
+        "enforcement",
+        Priority.LOW,
+        False,
         ("noise", "loudspeaker", "generator", "loud music"),
     ),
     (
-        "fire-safety", "Fire or immediate danger", "emergency-services", Priority.EMERGENCY, True,
+        "fire-safety",
+        "Fire or immediate danger",
+        "emergency-services",
+        Priority.EMERGENCY,
+        True,
         ("fire", "smoke", "burning", "gas leak", "explosion", "collapse", "electrocution"),
     ),
     (
-        "other", "Something else", "administration", Priority.NORMAL, False,
+        "other",
+        "Something else",
+        "administration",
+        Priority.NORMAL,
+        False,
         (),
     ),
 )
@@ -139,15 +219,45 @@ DEFAULT_SLA_POLICIES: tuple[tuple[str, str | None, Priority | None, int, int], .
 
 #: slug, name, fee, processing days, required documents
 DEFAULT_SERVICES: tuple[tuple[str, str, float, int, tuple[str, ...]], ...] = (
-    ("trade-licence", "Trade licence", 0.0, 14, ("identity_document", "premises_proof", "photograph")),
-    ("building-noc", "Building no-objection certificate", 0.0, 30, ("identity_document", "site_plan", "ownership_proof")),
+    (
+        "trade-licence",
+        "Trade licence",
+        0.0,
+        14,
+        ("identity_document", "premises_proof", "photograph"),
+    ),
+    (
+        "building-noc",
+        "Building no-objection certificate",
+        0.0,
+        30,
+        ("identity_document", "site_plan", "ownership_proof"),
+    ),
     ("water-connection", "New water connection", 0.0, 21, ("identity_document", "ownership_proof")),
     ("water-tanker", "Water tanker request", 0.0, 2, ("identity_document",)),
-    ("advertising-permit", "Advertising / hoarding permit", 0.0, 14, ("identity_document", "site_photograph")),
+    (
+        "advertising-permit",
+        "Advertising / hoarding permit",
+        0.0,
+        14,
+        ("identity_document", "site_photograph"),
+    ),
     ("event-permit", "Public event permit", 0.0, 10, ("identity_document", "event_plan")),
     ("birth-certificate", "Birth certificate", 0.0, 7, ("identity_document", "hospital_record")),
-    ("death-certificate", "Death certificate", 0.0, 7, ("identity_document", "medical_certificate")),
-    ("tree-cutting", "Tree cutting / pruning permission", 0.0, 14, ("identity_document", "site_photograph")),
+    (
+        "death-certificate",
+        "Death certificate",
+        0.0,
+        7,
+        ("identity_document", "medical_certificate"),
+    ),
+    (
+        "tree-cutting",
+        "Tree cutting / pruning permission",
+        0.0,
+        14,
+        ("identity_document", "site_photograph"),
+    ),
 )
 
 #: kind, name, frequency, days of week
@@ -160,25 +270,19 @@ DEFAULT_SCHEDULES: tuple[tuple[str, str, ScheduleFrequency, tuple[int, ...]], ..
 )
 
 
-async def seed_tenant_defaults(
-    session: AsyncSession, tenant: Municipality
-) -> dict[str, int]:
+async def seed_tenant_defaults(session: AsyncSession, tenant: Municipality) -> dict[str, int]:
     """Populate a new municipality with a working default configuration."""
     created = {"departments": 0, "categories": 0, "sla_policies": 0, "services": 0}
 
     departments: dict[str, Department] = {}
     for code, name, description in DEFAULT_DEPARTMENTS:
         existing = await session.scalar(
-            select(Department).where(
-                Department.tenant_id == tenant.id, Department.code == code
-            )
+            select(Department).where(Department.tenant_id == tenant.id, Department.code == code)
         )
         if existing is not None:
             departments[code] = existing
             continue
-        department = Department(
-            tenant_id=tenant.id, code=code, name=name, description=description
-        )
+        department = Department(tenant_id=tenant.id, code=code, name=name, description=description)
         session.add(department)
         departments[code] = department
         created["departments"] += 1
@@ -241,9 +345,7 @@ async def seed_tenant_defaults(
 
     for order, (slug, name, fee, days, documents) in enumerate(DEFAULT_SERVICES):
         exists = await session.scalar(
-            select(ServiceType).where(
-                ServiceType.tenant_id == tenant.id, ServiceType.slug == slug
-            )
+            select(ServiceType).where(ServiceType.tenant_id == tenant.id, ServiceType.slug == slug)
         )
         if exists is not None:
             continue
@@ -294,28 +396,58 @@ async def seed_tenant_defaults(
 def _default_form_schema(slug: str) -> list[dict[str, Any]]:
     """A minimal, sensible form per service; tenants edit these freely."""
     common = [
-        {"code": "applicant_address", "label": "Applicant address", "type": "text", "required": True},
+        {
+            "code": "applicant_address",
+            "label": "Applicant address",
+            "type": "text",
+            "required": True,
+        },
         {"code": "contact_number", "label": "Contact number", "type": "text", "required": True},
     ]
     specific: dict[str, list[dict[str, Any]]] = {
         "trade-licence": [
             {"code": "business_name", "label": "Business name", "type": "text", "required": True},
-            {"code": "business_type", "label": "Nature of business", "type": "text", "required": True},
-            {"code": "premises_area", "label": "Premises area (sq ft)", "type": "number", "required": False},
+            {
+                "code": "business_type",
+                "label": "Nature of business",
+                "type": "text",
+                "required": True,
+            },
+            {
+                "code": "premises_area",
+                "label": "Premises area (sq ft)",
+                "type": "number",
+                "required": False,
+            },
         ],
         "building-noc": [
             {"code": "plot_number", "label": "Plot number", "type": "text", "required": True},
             {"code": "storeys", "label": "Number of storeys", "type": "number", "required": True},
-            {"code": "covered_area", "label": "Covered area (sq ft)", "type": "number", "required": True},
+            {
+                "code": "covered_area",
+                "label": "Covered area (sq ft)",
+                "type": "number",
+                "required": True,
+            },
         ],
         "water-tanker": [
-            {"code": "quantity_litres", "label": "Quantity required (litres)", "type": "number", "required": True},
+            {
+                "code": "quantity_litres",
+                "label": "Quantity required (litres)",
+                "type": "number",
+                "required": True,
+            },
             {"code": "urgency", "label": "Required by", "type": "date", "required": False},
         ],
         "event-permit": [
             {"code": "event_name", "label": "Event name", "type": "text", "required": True},
             {"code": "event_date", "label": "Event date", "type": "date", "required": True},
-            {"code": "expected_attendance", "label": "Expected attendance", "type": "number", "required": True},
+            {
+                "code": "expected_attendance",
+                "label": "Expected attendance",
+                "type": "number",
+                "required": True,
+            },
         ],
     }
     return common + specific.get(slug, [])
@@ -405,15 +537,11 @@ async def seed_demo_tenant(
     return tenant
 
 
-async def seed_demo_assets(
-    session: AsyncSession, tenant: Municipality, count: int = 40
-) -> int:
+async def seed_demo_assets(session: AsyncSession, tenant: Municipality, count: int = 40) -> int:
     """Add sample assets so the registry and map are not empty in a demo."""
-    from civicos.domain.assets import Asset  # noqa: PLC0415
+    from civicos.domain.assets import Asset
 
-    units = (
-        await session.scalars(select(AdminUnit).where(AdminUnit.tenant_id == tenant.id))
-    ).all()
+    units = (await session.scalars(select(AdminUnit).where(AdminUnit.tenant_id == tenant.id))).all()
     if not units:
         return 0
 

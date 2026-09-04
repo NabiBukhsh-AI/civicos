@@ -130,9 +130,7 @@ def _rule_based_moderation(text: str) -> ModerationResult:
     )
 
 
-async def analyse_sentiment(
-    text: str, *, usage: UsageContext | None = None
-) -> SentimentAnalysis:
+async def analyse_sentiment(text: str, *, usage: UsageContext | None = None) -> SentimentAnalysis:
     """Classify feedback sentiment and pull out recurring themes."""
     request = CompletionRequest(
         messages=[
@@ -159,7 +157,7 @@ async def analyse_sentiment(
     try:
         return SentimentAnalysis.model_validate(result.parsed or {})
     except Exception:
-        from civicos.ai.providers.heuristic import _sentiment  # noqa: PLC0415
+        from civicos.ai.providers.heuristic import _sentiment
 
         label = _sentiment(text)
         return SentimentAnalysis(

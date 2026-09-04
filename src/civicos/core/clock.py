@@ -93,9 +93,7 @@ def business_minutes_between(
             window_end = min(end, day_end)
             if window_end > window_start:
                 total += int((window_end - window_start).total_seconds() // 60)
-        cursor = datetime.combine(
-            day + timedelta(days=1), time.min, tzinfo=cursor.tzinfo
-        )
+        cursor = datetime.combine(day + timedelta(days=1), time.min, tzinfo=cursor.tzinfo)
     return total
 
 

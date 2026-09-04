@@ -66,7 +66,7 @@ class UsageContext:
     label: str | None = None
 
     @classmethod
-    def from_request(cls, session: AsyncSession | None = None, **kwargs: Any) -> "UsageContext":
+    def from_request(cls, session: AsyncSession | None = None, **kwargs: Any) -> UsageContext:
         actor = context.get_actor()
         return cls(
             session=session,
@@ -88,20 +88,14 @@ async def run_completion(
     usage = usage or UsageContext.from_request()
     settings = get_settings()
 
-    provider = provider_for(
-        Capability.VISION if request.images else Capability.CHAT
-    )
+    provider = provider_for(Capability.VISION if request.images else Capability.CHAT)
     if request.model is None:
-        request.model = model_for(
-            Capability.VISION if request.images else Capability.CHAT
-        )
+        request.model = model_for(Capability.VISION if request.images else Capability.CHAT)
 
     if (
         usage.session is not None
         and usage.tenant_id is not None
-        and await _budget_exhausted(
-            usage.session, usage.tenant_id, settings.ai.daily_token_budget
-        )
+        and await _budget_exhausted(usage.session, usage.tenant_id, settings.ai.daily_token_budget)
     ):
         # Degrade rather than overspend: the queue keeps moving on rules alone.
         logger.warning("ai_budget_exhausted_using_offline", tenant_id=str(usage.tenant_id))
@@ -114,9 +108,7 @@ async def run_completion(
         await _record(usage, capability, provider.name, request.model or "", None, str(exc.code))
         if not allow_fallback:
             raise
-        logger.warning(
-            "ai_provider_failed_falling_back", provider=provider.name, error=exc.code
-        )
+        logger.warning("ai_provider_failed_falling_back", provider=provider.name, error=exc.code)
         fallback = _offline_provider()
         result = await fallback.complete(request)
         provider = fallback
@@ -163,22 +155,20 @@ async def run_embedding(
 
 
 def _offline_provider() -> Any:
-    from civicos.ai.registry import get_provider  # noqa: PLC0415
+    from civicos.ai.registry import get_provider
 
     return get_provider("heuristic")
 
 
-async def _budget_exhausted(
-    session: AsyncSession, tenant_id: uuid.UUID, daily_budget: int
-) -> bool:
+async def _budget_exhausted(session: AsyncSession, tenant_id: uuid.UUID, daily_budget: int) -> bool:
     """True when today's token spend for this tenant exceeds the cap."""
     if daily_budget <= 0:
         return False
     since = utcnow() - timedelta(hours=24)
     total = await session.scalar(
-        select(
-            func.coalesce(func.sum(AIUsage.input_tokens + AIUsage.output_tokens), 0)
-        ).where(AIUsage.tenant_id == tenant_id, AIUsage.created_at >= since)
+        select(func.coalesce(func.sum(AIUsage.input_tokens + AIUsage.output_tokens), 0)).where(
+            AIUsage.tenant_id == tenant_id, AIUsage.created_at >= since
+        )
     )
     return int(total or 0) >= daily_budget
 
@@ -259,11 +249,7 @@ async def tenant_usage_summary(
     return {
         "period_days": days,
         "total_calls": sum(item["calls"] for item in by_capability),
-        "total_tokens": sum(
-            item["input_tokens"] + item["output_tokens"] for item in by_capability
-        ),
-        "estimated_cost_usd": round(
-            sum(item["estimated_cost_usd"] for item in by_capability), 4
-        ),
+        "total_tokens": sum(item["input_tokens"] + item["output_tokens"] for item in by_capability),
+        "estimated_cost_usd": round(sum(item["estimated_cost_usd"] for item in by_capability), 4),
         "by_capability": by_capability,
     }

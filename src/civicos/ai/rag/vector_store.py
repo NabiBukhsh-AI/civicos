@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
 import structlog
 from sqlalchemy import Select, and_, or_, select
@@ -144,18 +145,14 @@ class NumpyVectorStore(VectorStore):
 
         scored: list[ScoredChunk] = []
         for chunk, document in rows:
-            semantic = (
-                cosine_similarity(query_vector, chunk.embedding) if chunk.embedding else 0.0
-            )
+            semantic = cosine_similarity(query_vector, chunk.embedding) if chunk.embedding else 0.0
             lexical = _lexical_overlap(chunk.search_text or chunk.content, keyword_set)
             # Hybrid: semantic similarity carries the meaning, lexical overlap
             # rescues exact terms (a scheme number, a section reference) that
             # embeddings routinely blur.
             combined = (1 - weight) * semantic + weight * lexical
             scored.append(
-                ScoredChunk(
-                    chunk=chunk, document=document, score=combined, lexical_score=lexical
-                )
+                ScoredChunk(chunk=chunk, document=document, score=combined, lexical_score=lexical)
             )
 
         scored.sort(key=lambda item: item.score, reverse=True)
@@ -205,9 +202,7 @@ class PgVectorStore(VectorStore):
                     chunk=chunk,
                     document=document,
                     score=semantic,
-                    lexical_score=_lexical_overlap(
-                        chunk.search_text or chunk.content, keyword_set
-                    ),
+                    lexical_score=_lexical_overlap(chunk.search_text or chunk.content, keyword_set),
                 )
             )
         return results
@@ -239,7 +234,7 @@ async def get_vector_store(session: AsyncSession | None = None) -> VectorStore:
     elif backend == "numpy":
         _store = NumpyVectorStore()
     else:  # auto
-        from civicos.db.session import has_pgvector  # noqa: PLC0415
+        from civicos.db.session import has_pgvector
 
         _store = PgVectorStore() if await has_pgvector() else NumpyVectorStore()
 

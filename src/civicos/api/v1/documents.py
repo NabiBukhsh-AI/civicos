@@ -63,7 +63,7 @@ async def upload_document(
     whether the file was readable - scanned PDFs with no text layer are the
     most common upload problem, and silence would be the wrong answer.
     """
-    from civicos.core.config import get_settings  # noqa: PLC0415
+    from civicos.core.config import get_settings
 
     settings = get_settings()
     data = await file.read()
@@ -137,7 +137,7 @@ async def list_documents(
     search: Annotated[str | None, Query(max_length=200)] = None,
 ) -> Page[DocumentOut]:
     """List documents the caller is permitted to see."""
-    from sqlalchemy import func, or_  # noqa: PLC0415
+    from sqlalchemy import func, or_
 
     visibilities = _visible_levels(actor)
     statement = select(Document).where(
@@ -159,14 +159,10 @@ async def list_documents(
             )
         )
 
-    total = int(
-        await session.scalar(select(func.count()).select_from(statement.subquery())) or 0
-    )
+    total = int(await session.scalar(select(func.count()).select_from(statement.subquery())) or 0)
     rows = (
         await session.scalars(
-            statement.order_by(Document.created_at.desc())
-            .offset(page.offset)
-            .limit(page.limit)
+            statement.order_by(Document.created_at.desc()).offset(page.offset).limit(page.limit)
         )
     ).all()
     result = PageResult.build([DocumentOut.model_validate(row) for row in rows], total, page)
@@ -223,9 +219,7 @@ async def get_document(
     response_model=DocumentOut,
     dependencies=[Depends(require_permission(CREATE))],
 )
-async def reindex(
-    document_id: uuid.UUID, session: SessionDep, tenant: TenantDep
-) -> DocumentOut:
+async def reindex(document_id: uuid.UUID, session: SessionDep, tenant: TenantDep) -> DocumentOut:
     """Re-run extraction and embedding, e.g. after changing the embedding model."""
     document = await _load(session, tenant.id, document_id)
     if not document.storage_key:
@@ -258,17 +252,15 @@ async def archive_document(
     The row and the stored file are retained - municipal records are not
     deleted, they are withdrawn from circulation.
     """
-    from sqlalchemy import delete  # noqa: PLC0415
+    from sqlalchemy import delete
 
-    from civicos.core.clock import utcnow  # noqa: PLC0415
-    from civicos.domain.knowledge import DocumentChunk  # noqa: PLC0415
+    from civicos.core.clock import utcnow
+    from civicos.domain.knowledge import DocumentChunk
 
     document = await _load(session, tenant.id, document_id)
     document.status = DocumentStatus.ARCHIVED
     document.deleted_at = utcnow()
-    await session.execute(
-        delete(DocumentChunk).where(DocumentChunk.document_id == document.id)
-    )
+    await session.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document.id))
     await session.commit()
     return Message(
         message=f"'{document.title}' archived.",
@@ -287,7 +279,7 @@ async def _load(session, tenant_id: uuid.UUID, document_id: uuid.UUID) -> Docume
 
 
 def _visible_levels(actor) -> set[Visibility]:
-    from civicos.ai.rag.retriever import AUDIENCE_VISIBILITY  # noqa: PLC0415
+    from civicos.ai.rag.retriever import AUDIENCE_VISIBILITY
 
     audience = audience_for_role(actor.role, is_staff(actor.role or ""))
     return AUDIENCE_VISIBILITY.get(audience, {Visibility.PUBLIC})

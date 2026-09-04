@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Sequence
+from typing import Any
 
 from sqlalchemy import Select, String, and_, cast, func, or_, select
 from sqlalchemy.orm import selectinload
@@ -93,9 +94,7 @@ class IssueRepository(TenantRepository[Issue]):
                 )
             )
         if filters.at_risk_only:
-            statement = statement.where(
-                Issue.sla_resolution_state == SLAState.AT_RISK
-            )
+            statement = statement.where(Issue.sla_resolution_state == SLAState.AT_RISK)
         if filters.flagged_only:
             statement = statement.where(Issue.is_flagged.is_(True))
         if filters.has_location is True:
@@ -146,9 +145,7 @@ class IssueRepository(TenantRepository[Issue]):
     ) -> tuple[Sequence[Issue], int]:
         statement = self.build_query(filters)
         total = await self.count(statement)
-        statement = apply_sort(
-            statement, Issue, sort_by, descending, allowed=SORTABLE_FIELDS
-        )
+        statement = apply_sort(statement, Issue, sort_by, descending, allowed=SORTABLE_FIELDS)
         items = await self.list(statement, page=page)
 
         # The bounding box is a coarse pre-filter; refine to a true radius.
@@ -159,7 +156,8 @@ class IssueRepository(TenantRepository[Issue]):
                 for issue in items
                 if issue.has_location
                 and haversine_meters(
-                    centre, Point(issue.latitude, issue.longitude)  # type: ignore[arg-type]
+                    centre,
+                    Point(issue.latitude, issue.longitude),  # type: ignore[arg-type]
                 )
                 <= filters.radius_meters
             ]
@@ -178,9 +176,7 @@ class IssueRepository(TenantRepository[Issue]):
         )
 
     async def get_by_reference(self, reference: str) -> Issue | None:
-        return await self.session.scalar(
-            self.query().where(Issue.reference == reference.upper())
-        )
+        return await self.session.scalar(self.query().where(Issue.reference == reference.upper()))
 
     async def find_nearby(
         self,
@@ -199,7 +195,7 @@ class IssueRepository(TenantRepository[Issue]):
             .where(
                 Issue.latitude.between(box.min_latitude, box.max_latitude),
                 Issue.longitude.between(box.min_longitude, box.max_longitude),
-                Issue.status.in_(_open_statuses() + [IssueStatus.RESOLVED]),
+                Issue.status.in_([*_open_statuses(), IssueStatus.RESOLVED]),
             )
             .limit(limit * 4)
         )
@@ -248,16 +244,12 @@ class IssueRepository(TenantRepository[Issue]):
                         and_(
                             Issue.response_due_at.is_not(None),
                             Issue.response_due_at < now,
-                            Issue.sla_response_state.in_(
-                                [SLAState.ON_TRACK, SLAState.AT_RISK]
-                            ),
+                            Issue.sla_response_state.in_([SLAState.ON_TRACK, SLAState.AT_RISK]),
                         ),
                         and_(
                             Issue.resolution_due_at.is_not(None),
                             Issue.resolution_due_at < now,
-                            Issue.sla_resolution_state.in_(
-                                [SLAState.ON_TRACK, SLAState.AT_RISK]
-                            ),
+                            Issue.sla_resolution_state.in_([SLAState.ON_TRACK, SLAState.AT_RISK]),
                         ),
                     ),
                 )
@@ -294,7 +286,9 @@ class IssueRepository(TenantRepository[Issue]):
             statement = statement.where(Issue.created_at >= since)
         if open_only:
             statement = statement.where(Issue.status.in_(_open_statuses()))
-        return [(value, int(count)) for value, count in (await self.session.execute(statement)).all()]
+        return [
+            (value, int(count)) for value, count in (await self.session.execute(statement)).all()
+        ]
 
     async def resolution_stats(self, since: datetime) -> dict[str, float | int]:
         """Mean first-response and resolution times, plus mean satisfaction.
@@ -311,9 +305,7 @@ class IssueRepository(TenantRepository[Issue]):
                 func.julianday(Issue.first_response_at) - func.julianday(Issue.created_at)
             ) * 24.0
         else:
-            resolution_hours = (
-                func.extract("epoch", Issue.resolved_at - Issue.created_at) / 3600.0
-            )
+            resolution_hours = func.extract("epoch", Issue.resolved_at - Issue.created_at) / 3600.0
             response_hours = (
                 func.extract("epoch", Issue.first_response_at - Issue.created_at) / 3600.0
             )

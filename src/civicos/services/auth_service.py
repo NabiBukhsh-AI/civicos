@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Sequence
 
 import structlog
 from sqlalchemy import or_, select, update
@@ -98,9 +98,7 @@ async def register(
         raise ValidationError("Staff accounts require a password.", code="password_required")
 
     if await _find_by_identifier(session, tenant.id, email or phone or "") is not None:
-        raise ConflictError(
-            "An account with those details already exists.", code="user_exists"
-        )
+        raise ConflictError("An account with those details already exists.", code="user_exists")
 
     password_hash = None
     if password:
@@ -210,7 +208,6 @@ async def request_otp(
     The caller sends the plaintext over SMS; only its hash is stored, so a
     database leak cannot be replayed into account access.
     """
-    settings = get_settings()
     target = normalise_phone(target) or target.strip().lower()
 
     # Invalidate any outstanding codes for this target so only one is live.
@@ -348,16 +345,12 @@ async def sign_out(
     now = utcnow()
     statement = update(UserSession).where(UserSession.revoked_at.is_(None))
     if refresh_token:
-        statement = statement.where(
-            UserSession.refresh_token_hash == _hash_token(refresh_token)
-        )
+        statement = statement.where(UserSession.refresh_token_hash == _hash_token(refresh_token))
     elif user_id:
         statement = statement.where(UserSession.user_id == user_id)
     else:
         return 0
-    result = await session.execute(
-        statement.values(revoked_at=now, revoked_reason="signed_out")
-    )
+    result = await session.execute(statement.values(revoked_at=now, revoked_reason="signed_out"))
     return int(result.rowcount or 0)
 
 
@@ -594,13 +587,11 @@ def _hash_token(token: str) -> str:
 def _hash_code(code: str, target: str) -> str:
     """Salt the OTP with its target so codes are not interchangeable."""
     settings = get_settings()
-    return hashlib.sha256(
-        f"{settings.security.secret_key}:{target}:{code}".encode()
-    ).hexdigest()
+    return hashlib.sha256(f"{settings.security.secret_key}:{target}:{code}".encode()).hexdigest()
 
 
 def _constant_time_equals(left: str, right: str) -> bool:
-    import hmac  # noqa: PLC0415
+    import hmac
 
     return hmac.compare_digest(left, right)
 

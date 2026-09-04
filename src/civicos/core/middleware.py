@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -83,9 +83,7 @@ class ResponseHeadersMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestHandler) -> Response:
         response = await call_next(request)
-        response.headers.setdefault(
-            REQUEST_ID_HEADER, getattr(request.state, "request_id", "")
-        )
+        response.headers.setdefault(REQUEST_ID_HEADER, getattr(request.state, "request_id", ""))
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")

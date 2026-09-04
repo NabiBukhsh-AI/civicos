@@ -111,7 +111,7 @@ class Document(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
     )
 
-    chunks: Mapped[list["DocumentChunk"]] = relationship(
+    chunks: Mapped[list[DocumentChunk]] = relationship(
         back_populates="document", cascade="all, delete-orphan", passive_deletes=True
     )
 
@@ -160,9 +160,7 @@ class Conversation(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteM
     """
 
     __tablename__ = "conversations"
-    __table_args__ = (
-        Index("ix_conversations_tenant_user", "tenant_id", "user_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_conversations_tenant_user", "tenant_id", "user_id", "created_at"),)
 
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
@@ -183,7 +181,7 @@ class Conversation(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteM
     last_message_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    messages: Mapped[list["ConversationMessage"]] = relationship(
+    messages: Mapped[list[ConversationMessage]] = relationship(
         back_populates="conversation",
         cascade="all, delete-orphan",
         order_by="ConversationMessage.created_at",
@@ -253,6 +251,4 @@ class AIUsage(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
     error_code: Mapped[str | None] = mapped_column(String(64))
     entity_type: Mapped[str | None] = mapped_column(String(48))
     entity_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
-    details: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    details: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)

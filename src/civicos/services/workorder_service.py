@@ -9,9 +9,10 @@ maintenance produces jobs with no complaint behind them.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Sequence
+from typing import Any
 
 import structlog
 from sqlalchemy import select
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from civicos.core.clock import utcnow
 from civicos.core.errors import ValidationError, WorkflowError
 from civicos.core.security import generate_reference
+from civicos.domain.assets import Asset
 from civicos.domain.enums import (
     WORK_ORDER_TRANSITIONS,
     AssetCondition,
@@ -30,7 +32,6 @@ from civicos.domain.enums import (
     WorkOrderStatus,
     WorkOrderType,
 )
-from civicos.domain.assets import Asset
 from civicos.domain.identity import User
 from civicos.domain.issues import Issue, IssueEvent
 from civicos.domain.tenancy import Municipality
@@ -85,17 +86,21 @@ async def create_work_order(
         title=draft.title,
         instructions=draft.instructions,
         order_type=draft.order_type,
-        priority=draft.priority if issue is None else max(
-            draft.priority, issue.priority, key=lambda p: p.weight
-        ),
+        priority=draft.priority
+        if issue is None
+        else max(draft.priority, issue.priority, key=lambda p: p.weight),
         issue_id=draft.issue_id,
         asset_id=draft.asset_id,
         department_id=draft.department_id or (issue.department_id if issue else None),
         admin_unit_id=draft.admin_unit_id or (issue.admin_unit_id if issue else None),
         crew_id=draft.crew_id,
         assigned_to_id=draft.assigned_to_id,
-        latitude=draft.latitude if draft.latitude is not None else (issue.latitude if issue else None),
-        longitude=draft.longitude if draft.longitude is not None else (issue.longitude if issue else None),
+        latitude=draft.latitude
+        if draft.latitude is not None
+        else (issue.latitude if issue else None),
+        longitude=draft.longitude
+        if draft.longitude is not None
+        else (issue.longitude if issue else None),
         address=draft.address or (issue.address if issue else None),
         scheduled_for=draft.scheduled_for,
         due_at=draft.due_at or (issue.resolution_due_at if issue else None),
@@ -175,9 +180,7 @@ async def transition(
             },
         )
     if new_status is WorkOrderStatus.BLOCKED and not note:
-        raise ValidationError(
-            "Explain what is blocking this job.", code="blocked_reason_required"
-        )
+        raise ValidationError("Explain what is blocking this job.", code="blocked_reason_required")
 
     now = utcnow()
     order.status = new_status
@@ -189,9 +192,7 @@ async def transition(
         order.completed_at = now
         order.completion_note = note or order.completion_note
         if order.started_at:
-            order.actual_hours = round(
-                (now - order.started_at).total_seconds() / 3600, 2
-            )
+            order.actual_hours = round((now - order.started_at).total_seconds() / 3600, 2)
     elif new_status is WorkOrderStatus.VERIFIED:
         order.verified_at = now
     elif new_status is WorkOrderStatus.BLOCKED:
@@ -388,7 +389,7 @@ async def _propagate_to_issue(
     if any(sibling.is_open for sibling in siblings):
         return  # other jobs still running; the issue is not finished
 
-    from civicos.services import issue_service  # noqa: PLC0415  (cyclic at import time)
+    from civicos.services import issue_service
 
     if issue.status in {IssueStatus.ASSIGNED, IssueStatus.IN_PROGRESS, IssueStatus.ON_HOLD}:
         await issue_service.transition(
@@ -402,9 +403,7 @@ async def _propagate_to_issue(
         )
 
 
-async def _notify_crew(
-    session: AsyncSession, tenant: Municipality, order: WorkOrder
-) -> None:
+async def _notify_crew(session: AsyncSession, tenant: Municipality, order: WorkOrder) -> None:
     recipients: list[Recipient] = []
     if order.assigned_to_id:
         user = await session.get(User, order.assigned_to_id)

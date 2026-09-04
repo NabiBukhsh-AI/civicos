@@ -17,10 +17,45 @@ _WORD = re.compile(r"[\w؀-ۿ]+", re.UNICODE)
 
 # Very small stopword list; only used to sharpen duplicate detection.
 _STOPWORDS = frozenset(
-    """
-    a an and are as at be by for from has have in is it its of on or that the
-    there this to was were will with please kindly sir we our my me you your
-    """.split()
+    [
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "has",
+        "have",
+        "in",
+        "is",
+        "it",
+        "its",
+        "of",
+        "on",
+        "or",
+        "that",
+        "the",
+        "there",
+        "this",
+        "to",
+        "was",
+        "were",
+        "will",
+        "with",
+        "please",
+        "kindly",
+        "sir",
+        "we",
+        "our",
+        "my",
+        "me",
+        "you",
+        "your",
+    ]
 )
 
 _URDU_RANGE = (0x0600, 0x06FF)

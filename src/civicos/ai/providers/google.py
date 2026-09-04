@@ -48,7 +48,7 @@ class GoogleProvider(LLMProvider):
                 "CIVICOS_AI__GOOGLE_API_KEY is not set.", code="google_api_key_missing"
             )
         try:
-            from google import genai  # noqa: PLC0415
+            from google import genai
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise ConfigurationError(
                 "The 'google-genai' package is not installed. "
@@ -96,7 +96,7 @@ class GoogleProvider(LLMProvider):
         return result
 
     def _build_payload(self, request: CompletionRequest) -> tuple[list[Any], dict[str, Any]]:
-        from google.genai import types as genai_types  # noqa: PLC0415
+        from google.genai import types as genai_types
 
         settings = self._settings
         system_parts: list[str] = [request.system] if request.system else []
@@ -109,9 +109,7 @@ class GoogleProvider(LLMProvider):
             parts: list[Any] = []
             for image in message.images:
                 parts.append(
-                    genai_types.Part.from_bytes(
-                        data=image.data, mime_type=image.media_type
-                    )
+                    genai_types.Part.from_bytes(data=image.data, mime_type=image.media_type)
                 )
             if message.content:
                 parts.append(genai_types.Part.from_text(text=message.content))
@@ -124,9 +122,7 @@ class GoogleProvider(LLMProvider):
         config: dict[str, Any] = {
             "max_output_tokens": request.max_output_tokens or settings.ai.max_output_tokens,
             "temperature": (
-                request.temperature
-                if request.temperature is not None
-                else settings.ai.temperature
+                request.temperature if request.temperature is not None else settings.ai.temperature
             ),
         }
         if system_parts:

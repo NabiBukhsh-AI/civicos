@@ -111,7 +111,7 @@ class Asset(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteMixin, M
     """Encoded into a sticker so a resident can scan a broken streetlight and
     file a pre-located report in two taps."""
 
-    inspections: Mapped[list["AssetInspection"]] = relationship(
+    inspections: Mapped[list[AssetInspection]] = relationship(
         back_populates="asset",
         cascade="all, delete-orphan",
         order_by="AssetInspection.inspected_at.desc()",
@@ -129,9 +129,7 @@ class Asset(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteMixin, M
     def needs_inspection(self) -> bool:
         from civicos.core.clock import ensure_utc, utcnow
 
-        return bool(
-            self.next_inspection_due and ensure_utc(self.next_inspection_due) <= utcnow()
-        )
+        return bool(self.next_inspection_due and ensure_utc(self.next_inspection_due) <= utcnow())
 
     @property
     def is_end_of_life(self) -> bool:

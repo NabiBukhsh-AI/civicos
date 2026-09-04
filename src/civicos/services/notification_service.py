@@ -8,8 +8,9 @@ sending so a delivery failure is visible and retryable rather than lost.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
 import structlog
 from sqlalchemy import func, select, update
@@ -48,7 +49,7 @@ class Recipient:
     channels: list[NotificationChannel] | None = None
 
     @classmethod
-    def for_user(cls, user: User) -> "Recipient":
+    def for_user(cls, user: User) -> Recipient:
         return cls(
             user=user,
             phone=user.phone,
@@ -63,7 +64,11 @@ class Recipient:
         )
 
     def destination_for(self, channel: NotificationChannel) -> str | None:
-        if channel in {NotificationChannel.SMS, NotificationChannel.WHATSAPP, NotificationChannel.VOICE}:
+        if channel in {
+            NotificationChannel.SMS,
+            NotificationChannel.WHATSAPP,
+            NotificationChannel.VOICE,
+        }:
             return self.phone
         if channel is NotificationChannel.EMAIL:
             return self.email
@@ -217,9 +222,7 @@ async def list_for_user(
     if unread_only:
         statement = statement.where(Notification.read_at.is_(None))
 
-    total = int(
-        await session.scalar(select(func.count()).select_from(statement.subquery())) or 0
-    )
+    total = int(await session.scalar(select(func.count()).select_from(statement.subquery())) or 0)
     statement = statement.order_by(Notification.created_at.desc())
     if page:
         statement = statement.offset(page.offset).limit(page.limit)
@@ -248,9 +251,7 @@ async def mark_read(
     return int(result.rowcount or 0)
 
 
-async def unread_count(
-    session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID
-) -> int:
+async def unread_count(session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID) -> int:
     return int(
         await session.scalar(
             select(func.count())

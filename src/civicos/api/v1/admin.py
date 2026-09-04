@@ -75,7 +75,7 @@ async def create_municipality(
     payload: MunicipalityCreateRequest, session: SessionDep
 ) -> MunicipalityOut:
     """Onboard a new municipality. Platform administrators only."""
-    from civicos.db.seed import seed_tenant_defaults  # noqa: PLC0415
+    from civicos.db.seed import seed_tenant_defaults
 
     slug = slugify(payload.slug)
     if await session.scalar(select(Municipality).where(Municipality.slug == slug)):
@@ -263,9 +263,7 @@ async def create_category(
     ``keywords`` and ``ai_hints`` teach the triage classifier local vocabulary
     immediately - no deployment required.
     """
-    category = IssueCategory(
-        tenant_id=tenant.id, **payload.model_dump()
-    )
+    category = IssueCategory(tenant_id=tenant.id, **payload.model_dump())
     session.add(category)
     await session.commit()
     return CategoryOut.model_validate(category)
@@ -353,9 +351,7 @@ async def list_users(
             | func.lower(func.coalesce(User.phone, "")).like(term)
         )
 
-    total = int(
-        await session.scalar(select(func.count()).select_from(statement.subquery())) or 0
-    )
+    total = int(await session.scalar(select(func.count()).select_from(statement.subquery())) or 0)
     rows = (
         await session.scalars(
             statement.order_by(User.full_name).offset(page.offset).limit(page.limit)
@@ -470,17 +466,15 @@ async def purge_audit(
     older_than_days: Annotated[int, Query(ge=365, le=3650)] = 1825,
 ) -> Message:
     """Purge audit entries older than a retention period (minimum one year)."""
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
-    from sqlalchemy import delete  # noqa: PLC0415
+    from sqlalchemy import delete
 
-    from civicos.core.clock import utcnow  # noqa: PLC0415
+    from civicos.core.clock import utcnow
 
     cutoff = utcnow() - timedelta(days=older_than_days)
     result = await session.execute(
-        delete(AuditLog).where(
-            AuditLog.tenant_id == tenant.id, AuditLog.created_at < cutoff
-        )
+        delete(AuditLog).where(AuditLog.tenant_id == tenant.id, AuditLog.created_at < cutoff)
     )
     await session.commit()
     return Message(message=f"{result.rowcount or 0} audit entries purged.")

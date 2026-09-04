@@ -10,7 +10,8 @@ issue so a geotagged photo is enough to place a complaint on the map.
 from __future__ import annotations
 
 import uuid
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import structlog
 from fastapi import UploadFile
@@ -22,15 +23,15 @@ from civicos.ai.vision import analyse_images
 from civicos.core.config import get_settings
 from civicos.core.errors import PayloadTooLargeError
 from civicos.core.geo import Point, encode_geohash, is_valid_coordinate
+from civicos.domain.enums import IssueEventType
+from civicos.domain.issues import Issue, IssueAttachment, IssueEvent
+from civicos.domain.tenancy import Municipality
 from civicos.integrations.exif import extract_metadata, location_consistency
 from civicos.integrations.storage import (
     get_storage,
     validate_upload,
     verify_declared_type,
 )
-from civicos.domain.enums import IssueEventType
-from civicos.domain.issues import Issue, IssueAttachment, IssueEvent
-from civicos.domain.tenancy import Municipality
 
 logger = structlog.get_logger(__name__)
 
@@ -177,7 +178,7 @@ async def _analyse_and_store(
     attachments: list[IssueAttachment],
 ) -> None:
     """Run vision analysis and record it against the issue and its photos."""
-    from civicos.services.routing_service import taxonomy_for_prompt  # noqa: PLC0415
+    from civicos.services.routing_service import taxonomy_for_prompt
 
     try:
         taxonomy = await taxonomy_for_prompt(session, tenant.id)

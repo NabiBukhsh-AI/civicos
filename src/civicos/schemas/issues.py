@@ -64,7 +64,7 @@ class IssueCreateRequest(InputModel):
     extra: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def _anonymous_has_no_contact(self) -> "IssueCreateRequest":
+    def _anonymous_has_no_contact(self) -> IssueCreateRequest:
         if self.is_anonymous and (self.reporter_phone or self.reporter_email):
             # An "anonymous" report carrying a phone number is a contradiction
             # the reporter did not intend; drop the identifying fields.
@@ -209,7 +209,7 @@ class IssueDetail(IssueSummary):
     ai: AITriageOut | None = None
     attachments: list[AttachmentOut] = Field(default_factory=list)
     timeline: list[TimelineEntry] = Field(default_factory=list)
-    comments: list["IssueCommentOut"] = Field(default_factory=list)
+    comments: list[IssueCommentOut] = Field(default_factory=list)
 
 
 class IssueCommentOut(APIModel):

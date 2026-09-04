@@ -32,7 +32,9 @@ def hash_password(password: str) -> str:
     Passwords longer than bcrypt's 72-byte limit are pre-hashed with SHA-256 so
     that long passphrases are not silently truncated.
     """
-    return bcrypt.hashpw(_prepare_password(password), bcrypt.gensalt(get_settings().security.bcrypt_rounds)).decode()
+    return bcrypt.hashpw(
+        _prepare_password(password), bcrypt.gensalt(get_settings().security.bcrypt_rounds)
+    ).decode()
 
 
 def verify_password(password: str, hashed: str) -> bool:
@@ -158,9 +160,7 @@ def decode_token(token: str, *, expected_type: TokenType | None = None) -> Token
 
     token_type = payload.get("typ")
     if expected_type and token_type != expected_type:
-        raise AuthenticationError(
-            f"Expected a {expected_type} token.", code="token_wrong_type"
-        )
+        raise AuthenticationError(f"Expected a {expected_type} token.", code="token_wrong_type")
 
     return TokenClaims(
         subject=payload["sub"],

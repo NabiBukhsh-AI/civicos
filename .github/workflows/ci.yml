@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  # The suite runs on the offline AI provider: no keys, no network, no cost.
+  CIVICOS_AI__PROVIDER: mock
+  CIVICOS_SECURITY__SECRET_KEY: ci-secret-key-that-is-long-enough-for-tests
+
+jobs:
+  quality:
+    name: Lint and type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Ruff
+        run: ruff check src tests --output-format=github
+      - name: Ruff format
+        run: ruff format --check src tests
+      - name: mypy
+        run: mypy src
+        continue-on-error: true
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Run tests
+        run: pytest -q --cov --cov-report=xml
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  migrations:
+    name: Migrations apply cleanly
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: civicos
+          POSTGRES_PASSWORD: civicos
+          POSTGRES_DB: civicos
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U civicos"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CIVICOS_DATABASE__URL: postgresql+asyncpg://civicos:civicos@localhost:5432/civicos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev,postgres]"
+      - name: Enable pgvector
+        run: |
+          PGPASSWORD=civicos psql -h localhost -U civicos -d civicos \
+            -c "CREATE EXTENSION IF NOT EXISTS vector;"
+      - name: Upgrade
+        run: alembic upgrade head
+      - name: Schema matches the models
+        run: |
+          # An empty autogenerate diff proves the migration and the models agree.
+          alembic check
+      - name: Downgrade to base
+        run: alembic downgrade base
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          target: runtime
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

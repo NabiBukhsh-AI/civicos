@@ -8,9 +8,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy import select
 
-from civicos.ai import assistant, briefing, language as language_ai, vision
-from civicos.ai.registry import is_ai_enabled
+from civicos.ai import assistant, briefing, vision
+from civicos.ai import language as language_ai
 from civicos.ai.rag.retriever import audience_for_role
+from civicos.ai.registry import is_ai_enabled
 from civicos.ai.triage import DEFAULT_CONFIDENCE_FLOOR, is_confident, triage_report
 from civicos.ai.types import ImagePart
 from civicos.ai.usage import UsageContext, tenant_usage_summary
@@ -195,7 +196,7 @@ async def analyse(
     actions, a crew-hours estimate - alongside per-image EXIF, and checks the
     photo GPS against a supplied reference location when one is given.
     """
-    from civicos.core.config import get_settings  # noqa: PLC0415
+    from civicos.core.config import get_settings
 
     settings = get_settings()
     if not files:
@@ -315,7 +316,7 @@ async def executive_briefing(
 
     Statistics are computed in SQL; the model only composes and prioritises.
     """
-    from civicos.services import analytics_service  # noqa: PLC0415
+    from civicos.services import analytics_service
 
     statistics = await analytics_service.dashboard(session, tenant.id, days=payload.days)
     statistics["hotspots"] = [
@@ -360,7 +361,7 @@ async def ai_usage(
 @router.get("/status", response_model=dict, status_code=status.HTTP_200_OK)
 async def assistant_status(tenant: TenantDep) -> dict:
     """Whether AI features are live, so clients can hide what will not work."""
-    from civicos.core.config import get_settings  # noqa: PLC0415
+    from civicos.core.config import get_settings
 
     settings = get_settings()
     return {

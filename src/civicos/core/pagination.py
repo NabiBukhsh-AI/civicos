@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Generic, Sequence, TypeVar
+from collections.abc import Sequence
+from typing import Annotated, Generic, TypeVar
 
 from fastapi import Query
 from pydantic import BaseModel, Field
@@ -55,7 +56,7 @@ class Page(BaseModel, Generic[T]):
     meta: PageMeta
 
     @classmethod
-    def build(cls, items: Sequence[T], total: int, params: PageParams) -> "Page[T]":
+    def build(cls, items: Sequence[T], total: int, params: PageParams) -> Page[T]:
         total_pages = max(1, -(-total // params.page_size))  # ceil division
         return cls(
             items=list(items),

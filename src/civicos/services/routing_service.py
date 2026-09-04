@@ -10,9 +10,9 @@ which is what a supervisor needs when a resident asks why nobody came.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Sequence
 
 import structlog
 from sqlalchemy import func, select
@@ -60,9 +60,7 @@ async def resolve_admin_unit(
     point = Point(latitude, longitude)
     units = (
         await session.scalars(
-            select(AdminUnit).where(
-                AdminUnit.tenant_id == tenant_id, AdminUnit.is_active.is_(True)
-            )
+            select(AdminUnit).where(AdminUnit.tenant_id == tenant_id, AdminUnit.is_active.is_(True))
         )
     ).all()
     if not units:
@@ -225,9 +223,7 @@ async def pick_crew(
     priority: Priority = Priority.NORMAL,
 ) -> Crew | None:
     """Choose a crew by skill, coverage area and remaining capacity today."""
-    statement = select(Crew).where(
-        Crew.tenant_id == tenant_id, Crew.is_active.is_(True)
-    )
+    statement = select(Crew).where(Crew.tenant_id == tenant_id, Crew.is_active.is_(True))
     if department_id:
         statement = statement.where(Crew.department_id == department_id)
     crews = (await session.scalars(statement)).all()

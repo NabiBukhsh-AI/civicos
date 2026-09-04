@@ -123,7 +123,7 @@ async def get_rate_limiter() -> RateLimiter:
     settings = get_settings()
     if settings.redis.url:
         try:
-            import redis.asyncio as aioredis  # noqa: PLC0415
+            import redis.asyncio as aioredis
 
             client = aioredis.from_url(settings.redis.url, decode_responses=True)
             await client.ping()

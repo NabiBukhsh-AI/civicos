@@ -63,9 +63,7 @@ class StorageBackend(ABC):
         return True
 
 
-def build_key(
-    tenant_id: uuid.UUID, folder: str, filename: str, checksum: str
-) -> str:
+def build_key(tenant_id: uuid.UUID, folder: str, filename: str, checksum: str) -> str:
     """``<tenant>/<folder>/<yyyy>/<mm>/<hash8>-<safe-name>``.
 
     Date-partitioned so a year's uploads can be lifecycled or archived as a

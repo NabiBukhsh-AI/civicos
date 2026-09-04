@@ -101,7 +101,7 @@ class User(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, SoftDeleteMixin, Me
     reports_submitted: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     reports_confirmed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-    sessions: Mapped[list["UserSession"]] = relationship(
+    sessions: Mapped[list[UserSession]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 

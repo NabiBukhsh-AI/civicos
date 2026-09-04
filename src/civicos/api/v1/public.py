@@ -17,14 +17,14 @@ from sqlalchemy import func, select
 from civicos.api.deps import SessionDep, TenantDep
 from civicos.core.clock import utcnow
 from civicos.core.i18n import available_languages
+from civicos.domain.budget import BudgetLine, BudgetPeriod, DevelopmentProject
+from civicos.domain.engagement import Announcement, EmergencyAlert
 from civicos.domain.enums import (
     AnnouncementType,
     IssueStatus,
     ServiceApplicationStatus,
     Visibility,
 )
-from civicos.domain.budget import BudgetLine, BudgetPeriod, DevelopmentProject
-from civicos.domain.engagement import Announcement, EmergencyAlert
 from civicos.domain.issues import Issue
 from civicos.domain.services import ServiceSchedule, ServiceType
 from civicos.domain.tenancy import AdminUnit, IssueCategory, Representative
@@ -106,7 +106,7 @@ async def representatives(
     response: Response,
     admin_unit_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> list[RepresentativeOut]:
-    """"Who represents me" - the directory of elected and appointed officials."""
+    """ "Who represents me" - the directory of elected and appointed officials."""
     response.headers["Cache-Control"] = _CACHE_CONTROL
     statement = select(Representative).where(
         Representative.tenant_id == tenant.id, Representative.is_active.is_(True)
@@ -176,12 +176,10 @@ async def public_issues(
 
 
 @router.get("/issues/{reference}/status", response_model=dict)
-async def track_report(
-    reference: str, session: SessionDep, tenant: TenantDep
-) -> dict[str, Any]:
+async def track_report(reference: str, session: SessionDep, tenant: TenantDep) -> dict[str, Any]:
     """Track a report by its reference code - the anonymous reporter's lifeline."""
-    from civicos.core.errors import NotFoundError  # noqa: PLC0415
-    from civicos.repositories.issues import IssueRepository  # noqa: PLC0415
+    from civicos.core.errors import NotFoundError
+    from civicos.repositories.issues import IssueRepository
 
     issue = await IssueRepository(session, tenant.id).get_by_reference(reference)
     if issue is None:
@@ -304,9 +302,7 @@ async def schedules(
 
 
 @router.get("/budget", response_model=dict)
-async def budget(
-    session: SessionDep, tenant: TenantDep, response: Response
-) -> dict[str, Any]:
+async def budget(session: SessionDep, tenant: TenantDep, response: Response) -> dict[str, Any]:
     """Published budget: allocation and spend by head, for the current period."""
     response.headers["Cache-Control"] = _CACHE_CONTROL
     period = await session.scalar(
@@ -367,9 +363,7 @@ async def projects(
     )
     if admin_unit_id:
         statement = statement.where(DevelopmentProject.admin_unit_id == admin_unit_id)
-    rows = (
-        await session.scalars(statement.order_by(DevelopmentProject.created_at.desc()))
-    ).all()
+    rows = (await session.scalars(statement.order_by(DevelopmentProject.created_at.desc()))).all()
     return [
         {
             "code": project.code,
@@ -401,18 +395,22 @@ async def public_stats(
     held to it - which is the point.
     """
     response.headers["Cache-Control"] = _CACHE_CONTROL
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
     since = utcnow() - timedelta(days=30)
     created = await session.scalar(
-        select(func.count()).select_from(Issue).where(
+        select(func.count())
+        .select_from(Issue)
+        .where(
             Issue.tenant_id == tenant.id,
             Issue.deleted_at.is_(None),
             Issue.created_at >= since,
         )
     )
     resolved = await session.scalar(
-        select(func.count()).select_from(Issue).where(
+        select(func.count())
+        .select_from(Issue)
+        .where(
             Issue.tenant_id == tenant.id,
             Issue.deleted_at.is_(None),
             Issue.resolved_at.is_not(None),
@@ -420,16 +418,18 @@ async def public_stats(
         )
     )
     open_now = await session.scalar(
-        select(func.count()).select_from(Issue).where(
+        select(func.count())
+        .select_from(Issue)
+        .where(
             Issue.tenant_id == tenant.id,
             Issue.deleted_at.is_(None),
             Issue.status.in_([s for s in IssueStatus if s.is_open]),
         )
     )
     applications = await session.scalar(
-        select(func.count()).select_from(ServiceType).where(
-            ServiceType.tenant_id == tenant.id, ServiceType.is_active.is_(True)
-        )
+        select(func.count())
+        .select_from(ServiceType)
+        .where(ServiceType.tenant_id == tenant.id, ServiceType.is_active.is_(True))
     )
     return {
         "period_days": 30,
@@ -451,7 +451,7 @@ async def issues_geojson(
 ) -> dict[str, Any]:
     """Open-data export in GeoJSON, ready for QGIS or a mapping library."""
     response.headers["Cache-Control"] = _CACHE_CONTROL
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
     if not tenant.feature_enabled("open_data"):
         return {"type": "FeatureCollection", "features": []}
@@ -490,9 +490,7 @@ async def issues_geojson(
                     "priority": str(issue.priority),
                     "confirmations": issue.confirmations,
                     "reported_at": issue.created_at.isoformat(),
-                    "resolved_at": (
-                        issue.resolved_at.isoformat() if issue.resolved_at else None
-                    ),
+                    "resolved_at": (issue.resolved_at.isoformat() if issue.resolved_at else None),
                 },
             }
             for issue, category_name in rows
@@ -511,8 +509,8 @@ async def track_application(
     reference: str, session: SessionDep, tenant: TenantDep
 ) -> dict[str, Any]:
     """Track a permit or licence application by its reference."""
-    from civicos.core.errors import NotFoundError  # noqa: PLC0415
-    from civicos.domain.services import ServiceApplication  # noqa: PLC0415
+    from civicos.core.errors import NotFoundError
+    from civicos.domain.services import ServiceApplication
 
     application = await session.scalar(
         select(ServiceApplication).where(

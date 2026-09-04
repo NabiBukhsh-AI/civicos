@@ -43,8 +43,8 @@ async def liveness() -> dict[str, str]:
 @router.get("/health/ready", response_model=HealthStatus)
 async def readiness(response: Response) -> HealthStatus:
     """Dependency readiness: database, storage and AI providers."""
-    from civicos.ai.registry import provider_health  # noqa: PLC0415
-    from civicos.integrations.storage import get_storage  # noqa: PLC0415
+    from civicos.ai.registry import provider_health
+    from civicos.integrations.storage import get_storage
 
     settings = get_settings()
     checks: dict[str, Any] = {}

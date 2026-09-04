@@ -15,7 +15,7 @@ import structlog
 from fastapi import FastAPI, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = structlog.get_logger(__name__)
@@ -148,22 +148,20 @@ def register_exception_handlers(app: FastAPI) -> None:
     """Attach the CivicOS error envelope to a FastAPI application."""
 
     @app.exception_handler(CivicOSError)
-    async def _civicos_error(request: Request, exc: CivicOSError) -> ORJSONResponse:
+    async def _civicos_error(request: Request, exc: CivicOSError) -> JSONResponse:
         log = logger.bind(code=exc.code, path=request.url.path)
         if exc.status_code >= 500:
             log.error("request_failed", message=exc.message, details=exc.details)
         else:
             log.info("request_rejected", message=exc.message)
-        return ORJSONResponse(
+        return JSONResponse(
             status_code=exc.status_code,
             content=exc.to_payload(_request_id(request)),
         )
 
     @app.exception_handler(RequestValidationError)
-    async def _validation_error(
-        request: Request, exc: RequestValidationError
-    ) -> ORJSONResponse:
-        return ORJSONResponse(
+    async def _validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+        return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={
                 "error": {
@@ -176,7 +174,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def _http_error(request: Request, exc: StarletteHTTPException) -> ORJSONResponse:
+    async def _http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         code = {
             401: "authentication_required",
             403: "permission_denied",
@@ -184,7 +182,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             405: "method_not_allowed",
             429: "rate_limited",
         }.get(exc.status_code, "http_error")
-        return ORJSONResponse(
+        return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error": {
@@ -198,9 +196,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def _unhandled(request: Request, exc: Exception) -> ORJSONResponse:
+    async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
         logger.exception("unhandled_exception", path=request.url.path, error=str(exc))
-        return ORJSONResponse(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": {

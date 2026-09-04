@@ -183,7 +183,7 @@ def taxonomy_block(categories: list[dict[str, Any]]) -> str:
     classifier honour it immediately.
     """
     if not categories:
-        return "No taxonomy configured; use the slug \"other\"."
+        return 'No taxonomy configured; use the slug "other".'
     lines = ["Available categories (choose exactly one slug):"]
     for category in categories:
         parts = [f"- {category['slug']}: {category.get('name', category['slug'])}"]

@@ -67,17 +67,13 @@ class ServiceType(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixi
     )
 
     #: JSON-schema-like field definitions rendered dynamically by the client.
-    form_schema: Mapped[list[Any]] = mapped_column(
-        MutableJSONList, default=list, nullable=False
-    )
+    form_schema: Mapped[list[Any]] = mapped_column(MutableJSONList, default=list, nullable=False)
     #: ``[{"code": "cnic", "label": "CNIC copy", "required": true}]``
     required_documents: Mapped[list[Any]] = mapped_column(
         MutableJSONList, default=list, nullable=False
     )
     #: Ordered review steps, e.g. ``["clerk", "inspection", "department_head"]``.
-    approval_steps: Mapped[list[Any]] = mapped_column(
-        MutableJSONList, default=list, nullable=False
-    )
+    approval_steps: Mapped[list[Any]] = mapped_column(MutableJSONList, default=list, nullable=False)
 
     fee_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     fee_description: Mapped[str | None] = mapped_column(String(255))
@@ -97,9 +93,7 @@ class ServiceApplication(
 
     __tablename__ = "service_applications"
     __table_args__ = (
-        UniqueConstraint(
-            "tenant_id", "reference", name="uq_service_applications_tenant_reference"
-        ),
+        UniqueConstraint("tenant_id", "reference", name="uq_service_applications_tenant_reference"),
         Index("ix_service_applications_tenant_status", "tenant_id", "status"),
         Index("ix_service_applications_applicant", "tenant_id", "applicant_id"),
         Index("ix_service_applications_due", "tenant_id", "due_at"),
@@ -125,9 +119,7 @@ class ServiceApplication(
     applicant_id_hash: Mapped[str | None] = mapped_column(String(64))
 
     #: Answers keyed by the ``form_schema`` field codes.
-    form_data: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    form_data: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
     premises_address: Mapped[str | None] = mapped_column(Text)
     latitude: Mapped[float | None] = mapped_column(Coordinate)
     longitude: Mapped[float | None] = mapped_column(Coordinate)
@@ -156,16 +148,14 @@ class ServiceApplication(
     certificate_key: Mapped[str | None] = mapped_column(String(500))
 
     #: AI pre-check: completeness, obvious mismatches, missing documents.
-    ai_review: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    ai_review: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
 
     service_type: Mapped[ServiceType] = relationship(lazy="joined")
     applicant: Mapped[User | None] = relationship(foreign_keys=[applicant_id], lazy="joined")
-    documents: Mapped[list["ApplicationDocument"]] = relationship(
+    documents: Mapped[list[ApplicationDocument]] = relationship(
         back_populates="application", cascade="all, delete-orphan"
     )
-    events: Mapped[list["ApplicationEvent"]] = relationship(
+    events: Mapped[list[ApplicationEvent]] = relationship(
         back_populates="application",
         cascade="all, delete-orphan",
         order_by="ApplicationEvent.created_at",
@@ -252,7 +242,8 @@ class ServiceSchedule(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Metadata
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     service_kind: Mapped[str] = mapped_column(String(64), nullable=False)
-    """waste_collection | water_supply | street_sweeping | drain_cleaning | fogging | tanker_round"""
+    """waste_collection | water_supply | street_sweeping | drain_cleaning |
+    fogging | tanker_round"""
     description: Mapped[str | None] = mapped_column(Text)
 
     admin_unit_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -269,14 +260,10 @@ class ServiceSchedule(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Metadata
         StringEnum(ScheduleFrequency), default=ScheduleFrequency.DAILY, nullable=False
     )
     #: 0=Monday ... 6=Sunday
-    days_of_week: Mapped[list[Any]] = mapped_column(
-        MutableJSONList, default=list, nullable=False
-    )
+    days_of_week: Mapped[list[Any]] = mapped_column(MutableJSONList, default=list, nullable=False)
     start_time: Mapped[str | None] = mapped_column(String(5))
     end_time: Mapped[str | None] = mapped_column(String(5))
-    route_points: Mapped[list[Any]] = mapped_column(
-        MutableJSONList, default=list, nullable=False
-    )
+    route_points: Mapped[list[Any]] = mapped_column(MutableJSONList, default=list, nullable=False)
 
     effective_from: Mapped[date | None] = mapped_column(Date)
     effective_to: Mapped[date | None] = mapped_column(Date)

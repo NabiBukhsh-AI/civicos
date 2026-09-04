@@ -38,7 +38,7 @@ class AnthropicProvider(LLMProvider):
         if self._client is not None:
             return self._client
         try:
-            import anthropic  # noqa: PLC0415
+            import anthropic
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise ConfigurationError(
                 "The 'anthropic' package is not installed. "
@@ -58,7 +58,7 @@ class AnthropicProvider(LLMProvider):
         return self._client
 
     async def complete(self, request: CompletionRequest) -> CompletionResult:
-        import anthropic  # noqa: PLC0415
+        import anthropic
 
         client = self._get_client()
         model = request.model or self._default_model
@@ -94,9 +94,7 @@ class AnthropicProvider(LLMProvider):
             # Surfaced rather than swallowed: the caller decides whether to fall
             # back to a rule-based path or tell the operator.
             details = getattr(response, "stop_details", None)
-            logger.warning(
-                "anthropic_refusal", category=getattr(details, "category", None)
-            )
+            logger.warning("anthropic_refusal", category=getattr(details, "category", None))
 
         usage = response.usage
         result = CompletionResult(

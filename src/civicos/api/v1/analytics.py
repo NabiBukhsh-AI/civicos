@@ -65,7 +65,7 @@ async def breakdown(
     days: Annotated[int, Query(ge=1, le=365)] = 30,
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
 ) -> list[dict[str, Any]]:
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
     model = {
         "category": IssueCategory,
@@ -83,11 +83,9 @@ async def sla(
     tenant: TenantDep,
     days: Annotated[int, Query(ge=1, le=365)] = 30,
 ) -> dict[str, Any]:
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
-    return await analytics_service.sla_summary(
-        session, tenant.id, utcnow() - timedelta(days=days)
-    )
+    return await analytics_service.sla_summary(session, tenant.id, utcnow() - timedelta(days=days))
 
 
 @router.get("/departments", response_model=list, dependencies=[Depends(require_permission(READ))])
@@ -97,7 +95,7 @@ async def departments(
     days: Annotated[int, Query(ge=1, le=365)] = 30,
 ) -> list[dict[str, Any]]:
     """Per-department scorecard: volume, backlog and SLA compliance."""
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
     return await analytics_service.department_performance(
         session, tenant.id, utcnow() - timedelta(days=days)
@@ -124,13 +122,13 @@ async def export_issues(
     Streamed rather than buffered so a multi-year export does not have to fit
     in memory on a small server.
     """
-    from datetime import timedelta  # noqa: PLC0415
+    from datetime import timedelta
 
-    from sqlalchemy import select  # noqa: PLC0415
+    from sqlalchemy import select
 
-    from civicos.domain.issues import Issue  # noqa: PLC0415
-    from civicos.services import audit_service  # noqa: PLC0415
-    from civicos.domain.enums import AuditAction  # noqa: PLC0415
+    from civicos.domain.enums import AuditAction
+    from civicos.domain.issues import Issue
+    from civicos.services import audit_service
 
     await audit_service.record(
         session,

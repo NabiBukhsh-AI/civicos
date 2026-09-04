@@ -136,22 +136,22 @@ def record_ai_call(
         AI_TOKENS.labels(provider=provider, capability=capability, kind="output").inc(output_tokens)
 
 
-def setup_tracing(app: "FastAPI") -> None:
+def setup_tracing(app: FastAPI) -> None:
     """Wire OpenTelemetry if enabled and the optional extra is installed."""
     settings = get_settings()
     if not settings.observability.tracing_enabled:
         return
     try:  # pragma: no cover - optional dependency
-        from opentelemetry import trace  # noqa: PLC0415
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # noqa: PLC0415
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
             OTLPSpanExporter,
         )
-        from opentelemetry.instrumentation.fastapi import (  # noqa: PLC0415
+        from opentelemetry.instrumentation.fastapi import (
             FastAPIInstrumentor,
         )
-        from opentelemetry.sdk.resources import Resource  # noqa: PLC0415
-        from opentelemetry.sdk.trace import TracerProvider  # noqa: PLC0415
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: PLC0415
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
         resource = Resource.create(
             {
@@ -162,9 +162,7 @@ def setup_tracing(app: "FastAPI") -> None:
         provider = TracerProvider(resource=resource)
         if settings.observability.otlp_endpoint:
             provider.add_span_processor(
-                BatchSpanProcessor(
-                    OTLPSpanExporter(endpoint=settings.observability.otlp_endpoint)
-                )
+                BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.observability.otlp_endpoint))
             )
         trace.set_tracer_provider(provider)
         FastAPIInstrumentor.instrument_app(app, excluded_urls="health.*,metrics")
@@ -183,7 +181,6 @@ def normalise_path(raw_path: str, route_template: Any | None = None) -> str:
         return str(route_template)
     parts = raw_path.split("/")
     cleaned = [
-        "{id}" if (len(part) > 20 and any(ch.isdigit() for ch in part)) else part
-        for part in parts
+        "{id}" if (len(part) > 20 and any(ch.isdigit() for ch in part)) else part for part in parts
     ]
     return "/".join(cleaned) or "/"

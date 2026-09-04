@@ -54,7 +54,7 @@ class OpenAIProvider(LLMProvider):
                 "CIVICOS_AI__OPENAI_API_KEY is not set.", code="openai_api_key_missing"
             )
         try:
-            from openai import AsyncOpenAI  # noqa: PLC0415
+            from openai import AsyncOpenAI
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise ConfigurationError(
                 "The 'openai' package is not installed. "
@@ -121,9 +121,7 @@ class OpenAIProvider(LLMProvider):
                 parts.extend(
                     {
                         "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{image.media_type};base64,{image.to_base64()}"
-                        },
+                        "image_url": {"url": f"data:{image.media_type};base64,{image.to_base64()}"},
                     }
                     for image in message.images
                 )
@@ -136,9 +134,7 @@ class OpenAIProvider(LLMProvider):
             "messages": messages,
             "max_tokens": request.max_output_tokens or settings.ai.max_output_tokens,
             "temperature": (
-                request.temperature
-                if request.temperature is not None
-                else settings.ai.temperature
+                request.temperature if request.temperature is not None else settings.ai.temperature
             ),
         }
         if request.stop_sequences:

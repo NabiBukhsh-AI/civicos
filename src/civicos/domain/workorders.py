@@ -71,7 +71,7 @@ class Crew(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixin, Base
     capacity_per_day: Mapped[int] = mapped_column(Integer, default=8, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    members: Mapped[list["CrewMember"]] = relationship(
+    members: Mapped[list[CrewMember]] = relationship(
         back_populates="crew", cascade="all, delete-orphan", lazy="selectin"
     )
     supervisor: Mapped[User | None] = relationship(foreign_keys=[supervisor_id])
@@ -170,18 +170,16 @@ class WorkOrder(
     requires_verification: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     #: Signed off in the field: name + timestamp + optional signature image key.
-    signoff: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    signoff: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
 
     crew: Mapped[Crew | None] = relationship(lazy="joined")
     assignee: Mapped[User | None] = relationship(foreign_keys=[assigned_to_id], lazy="joined")
-    updates: Mapped[list["WorkOrderUpdate"]] = relationship(
+    updates: Mapped[list[WorkOrderUpdate]] = relationship(
         back_populates="work_order",
         cascade="all, delete-orphan",
         order_by="WorkOrderUpdate.created_at",
     )
-    materials: Mapped[list["MaterialUsage"]] = relationship(
+    materials: Mapped[list[MaterialUsage]] = relationship(
         back_populates="work_order", cascade="all, delete-orphan"
     )
 
@@ -221,9 +219,7 @@ class WorkOrderUpdate(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, Base):
     latitude: Mapped[float | None] = mapped_column(Coordinate)
     longitude: Mapped[float | None] = mapped_column(Coordinate)
     recorded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    payload: Mapped[dict[str, Any]] = mapped_column(
-        MutableJSONDict, default=dict, nullable=False
-    )
+    payload: Mapped[dict[str, Any]] = mapped_column(MutableJSONDict, default=dict, nullable=False)
 
     work_order: Mapped[WorkOrder] = relationship(back_populates="updates")
 

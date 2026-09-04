@@ -52,9 +52,7 @@ async def analyse_images(
     )
 
     request = CompletionRequest(
-        messages=[
-            Message(role="user", content="\n\n".join(instructions), images=list(images))
-        ],
+        messages=[Message(role="user", content="\n\n".join(instructions), images=list(images))],
         system=VISION_SYSTEM,
         response_schema=VisionReport.response_schema(),
         schema_name="vision_report",
@@ -118,9 +116,7 @@ def _fallback_report(image_count: int, raw_text: str) -> VisionReport:
     )
 
 
-def compare_before_after(
-    before: VisionReport, after: VisionReport
-) -> dict[str, Any]:
+def compare_before_after(before: VisionReport, after: VisionReport) -> dict[str, Any]:
     """Compare two reports to support work-order verification.
 
     A crew's "after" photo should show a better condition than the "before".

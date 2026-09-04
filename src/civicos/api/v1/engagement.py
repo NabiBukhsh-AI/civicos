@@ -6,6 +6,7 @@ import hashlib
 import uuid
 from typing import Annotated, Any
 
+import structlog
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import func, select
 
@@ -23,12 +24,6 @@ from civicos.core.clock import utcnow
 from civicos.core.errors import ConflictError, NotFoundError, ValidationError
 from civicos.core.pagination import Page as PageResult
 from civicos.core.permissions import Resource, perm
-from civicos.domain.enums import (
-    NotificationChannel,
-    QuestionType,
-    SurveyStatus,
-    Visibility,
-)
 from civicos.domain.engagement import (
     Announcement,
     EmergencyAlert,
@@ -36,6 +31,12 @@ from civicos.domain.engagement import (
     Survey,
     SurveyQuestion,
     SurveyResponse,
+)
+from civicos.domain.enums import (
+    NotificationChannel,
+    QuestionType,
+    SurveyStatus,
+    Visibility,
 )
 from civicos.domain.identity import User
 from civicos.schemas.common import Message, Page
@@ -52,6 +53,8 @@ from civicos.schemas.operations import (
 )
 from civicos.services import notification_service
 from civicos.services.notification_service import Recipient, notify
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["Engagement"])
 
@@ -112,21 +115,15 @@ async def list_announcements(
     if not actor.is_authenticated:
         statement = statement.where(Announcement.visibility == Visibility.PUBLIC)
 
-    total = int(
-        await session.scalar(select(func.count()).select_from(statement.subquery())) or 0
-    )
+    total = int(await session.scalar(select(func.count()).select_from(statement.subquery())) or 0)
     rows = (
         await session.scalars(
-            statement.order_by(
-                Announcement.is_pinned.desc(), Announcement.created_at.desc()
-            )
+            statement.order_by(Announcement.is_pinned.desc(), Announcement.created_at.desc())
             .offset(page.offset)
             .limit(page.limit)
         )
     ).all()
-    result = PageResult.build(
-        [AnnouncementOut.model_validate(row) for row in rows], total, page
-    )
+    result = PageResult.build([AnnouncementOut.model_validate(row) for row in rows], total, page)
     return Page[AnnouncementOut].model_validate(result.model_dump())
 
 
@@ -207,9 +204,7 @@ async def _broadcast(session, tenant, alert: EmergencyAlert) -> None:
         statement = statement.where(
             User.admin_unit_id.in_([uuid.UUID(str(u)) for u in alert.admin_unit_ids])
         )
-    recipients = [
-        Recipient.for_user(user) for user in (await session.scalars(statement)).all()
-    ]
+    recipients = [Recipient.for_user(user) for user in (await session.scalars(statement)).all()]
 
     channels = [
         NotificationChannel(channel)
@@ -288,9 +283,7 @@ async def create_survey(
 async def list_surveys(
     session: SessionDep, tenant: TenantDep, actor: OptionalActorDep
 ) -> list[SurveyOut]:
-    statement = select(Survey).where(
-        Survey.tenant_id == tenant.id, Survey.deleted_at.is_(None)
-    )
+    statement = select(Survey).where(Survey.tenant_id == tenant.id, Survey.deleted_at.is_(None))
     if not actor.is_authenticated:
         statement = statement.where(Survey.status == SurveyStatus.OPEN)
     rows = (await session.scalars(statement.order_by(Survey.created_at.desc()))).unique().all()
@@ -358,9 +351,7 @@ async def survey_results(
         raise NotFoundError("Survey not found.", code="survey_not_found")
 
     responses = (
-        await session.scalars(
-            select(SurveyResponse).where(SurveyResponse.survey_id == survey_id)
-        )
+        await session.scalars(select(SurveyResponse).where(SurveyResponse.survey_id == survey_id))
     ).all()
 
     tallies: dict[str, dict[str, int]] = {}
@@ -439,9 +430,7 @@ async def my_notifications(
     rows, total = await notification_service.list_for_user(
         session, tenant.id, user.id, unread_only=unread_only, page=page
     )
-    result = PageResult.build(
-        [NotificationOut.model_validate(row) for row in rows], total, page
-    )
+    result = PageResult.build([NotificationOut.model_validate(row) for row in rows], total, page)
     return Page[NotificationOut].model_validate(result.model_dump())
 
 
@@ -459,9 +448,7 @@ async def mark_read(
     user: CurrentUserDep,
     notification_ids: list[uuid.UUID] | None = None,
 ) -> Message:
-    count = await notification_service.mark_read(
-        session, tenant.id, user.id, notification_ids
-    )
+    count = await notification_service.mark_read(session, tenant.id, user.id, notification_ids)
     await session.commit()
     return Message(message=f"{count} notification(s) marked as read.")
 
@@ -469,20 +456,16 @@ async def mark_read(
 # ---------------------------------------------------------------- helpers ----
 
 
-def _respondent_key(
-    tenant_id: uuid.UUID, survey_id: uuid.UUID, user_id: uuid.UUID | None
-) -> str:
+def _respondent_key(tenant_id: uuid.UUID, survey_id: uuid.UUID, user_id: uuid.UUID | None) -> str:
     """One-way identity hash so anonymity and one-vote-per-person coexist."""
-    from civicos.core.config import get_settings  # noqa: PLC0415
+    from civicos.core.config import get_settings
 
     seed = str(user_id) if user_id else uuid.uuid4().hex
     secret = get_settings().security.secret_key
     return hashlib.sha256(f"{secret}:{tenant_id}:{survey_id}:{seed}".encode()).hexdigest()
 
 
-async def _translate_body(
-    session, tenant, body: str, source_language: str
-) -> dict[str, str]:
+async def _translate_body(session, tenant, body: str, source_language: str) -> dict[str, str]:
     """Pre-translate a notice into the tenant's other languages."""
     translations: dict[str, str] = {}
     for code in tenant.supported_languages or []:
@@ -496,6 +479,7 @@ async def _translate_body(
                 usage=UsageContext.from_request(session, tenant_id=tenant.id),
             )
             translations[code] = result.translated_text
-        except Exception:  # a failed translation must not block publication
+        except Exception as exc:  # a failed translation must not block publication
+            logger.warning("announcement_translation_failed", language=code, error=str(exc))
             continue
     return translations

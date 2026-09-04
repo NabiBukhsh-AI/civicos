@@ -21,8 +21,8 @@ flag for a human.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,8 +33,8 @@ from civicos.ai.schemas import DuplicateAssessment
 from civicos.ai.types import CompletionRequest, Message
 from civicos.ai.usage import UsageContext, run_completion
 from civicos.core.config import get_settings
-from civicos.core.geo import Point, haversine_meters
-from civicos.core.text import cosine_similarity, content_fingerprint, jaccard_similarity
+from civicos.core.geo import Point
+from civicos.core.text import content_fingerprint, cosine_similarity, jaccard_similarity
 from civicos.domain.issues import Issue
 from civicos.repositories.issues import IssueRepository
 
@@ -85,7 +85,9 @@ class DuplicateVerdict:
         return best.issue if best and best.should_merge else None
 
 
-def fingerprint_for(title: str, description: str, latitude: float | None, longitude: float | None) -> str:
+def fingerprint_for(
+    title: str, description: str, latitude: float | None, longitude: float | None
+) -> str:
     """Hash of the report's substance, rounded so tiny GPS jitter still matches."""
     coordinates = (
         f"{latitude:.4f},{longitude:.4f}" if latitude is not None and longitude is not None else ""
@@ -143,9 +145,7 @@ async def find_duplicates(
     for issue, distance in nearby:
         lexical = jaccard_similarity(new_text, f"{issue.title} {issue.description}")
         semantic = (
-            cosine_similarity(embedding, issue.embedding)
-            if embedding and issue.embedding
-            else 0.0
+            cosine_similarity(embedding, issue.embedding) if embedding and issue.embedding else 0.0
         )
         combined = _combine(
             distance_meters=distance,
@@ -162,9 +162,7 @@ async def find_duplicates(
                 lexical_score=round(lexical, 3),
                 semantic_score=round(semantic, 3),
                 combined_score=round(combined, 3),
-                reason=(
-                    f"{distance:.0f} m away, lexical {lexical:.2f}, semantic {semantic:.2f}"
-                ),
+                reason=(f"{distance:.0f} m away, lexical {lexical:.2f}, semantic {semantic:.2f}"),
             )
         )
 
