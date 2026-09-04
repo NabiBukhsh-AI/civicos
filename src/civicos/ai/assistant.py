@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from civicos.ai.prompts import ASSISTANT_SYSTEM, context_block
 from civicos.ai.rag.retriever import RetrievalResult, retrieve
+from civicos.ai.registry import is_ai_enabled
 from civicos.ai.schemas import GroundedAnswer
 from civicos.ai.types import CompletionRequest, Message
 from civicos.ai.usage import UsageContext, run_completion
@@ -102,21 +103,39 @@ async def ask(
 
     result = await run_completion(request, capability="rag", usage=usage)
 
-    try:
-        answer = GroundedAnswer.model_validate(result.parsed or {})
-    except Exception as exc:
-        logger.warning("assistant_validation_failed", error=str(exc))
-        answer = GroundedAnswer(
-            answer=result.text.strip() or _no_answer_text(),
-            answered_from_context=bool(retrieval.passages),
-            citations=[],
-            confidence=0.2,
-            follow_up_questions=[],
-            escalate_to_human=not retrieval.passages,
-        )
+    if not is_ai_enabled() and retrieval.passages:
+        # No model is configured, but retrieval still found relevant text.
+        # Handing back the passage itself is far more useful to a resident than
+        # "I don't know", and it is exactly as honest.
+        answer = _extractive_answer(retrieval)
+    else:
+        try:
+            answer = GroundedAnswer.model_validate(result.parsed or {})
+        except Exception as exc:
+            logger.warning("assistant_validation_failed", error=str(exc))
+            answer = GroundedAnswer(
+                answer=result.text.strip() or _no_answer_text(),
+                answered_from_context=bool(retrieval.passages),
+                citations=[],
+                confidence=0.2,
+                follow_up_questions=[],
+                escalate_to_human=not retrieval.passages,
+            )
 
     grounding = retrieval.mean_score
-    if retrieval.is_empty or not answer.answered_from_context:
+    if retrieval.is_empty:
+        # Nothing was retrieved, so whatever came back has no basis in the
+        # corpus. Publishing it would be exactly the failure this layer exists
+        # to prevent, so it is replaced outright rather than merely flagged.
+        answer = answer.model_copy(
+            update={
+                "answer": _no_answer_text(),
+                "answered_from_context": False,
+                "citations": [],
+                "escalate_to_human": True,
+            }
+        )
+    elif not answer.answered_from_context:
         answer = answer.model_copy(
             update={
                 "answer": answer.answer or _no_answer_text(),
@@ -272,6 +291,48 @@ def _reconcile_citations(
     if not reconciled and answer.answered_from_context:
         reconciled = list(retrieved.values())[:3]
     return reconciled
+
+
+def _quote_passage(passage: Any) -> str:
+    """Render one retrieved passage with a readable source line."""
+    source = f'From "{passage.document.title}"'
+    if passage.chunk.page_number:
+        source += f" (page {passage.chunk.page_number})"
+    return f"{source}:\n{truncate(passage.chunk.content, 900)}"
+
+
+def _extractive_answer(retrieval: RetrievalResult) -> GroundedAnswer:
+    """Build an answer by quoting what was retrieved, with no model involved.
+
+    Used when no AI provider is configured. The resident gets the municipality's
+    own words - which is what they were asking for - plus a clear note that the
+    passage was matched, not interpreted.
+    """
+    from civicos.ai.schemas import AnswerCitation
+
+    top = retrieval.passages[: min(2, len(retrieval.passages))]
+    quoted = "\n\n".join(_quote_passage(passage) for passage in top)
+    return GroundedAnswer(
+        answer=(
+            "Automated answering is not enabled on this service, so here is the "
+            "most relevant text from the published documents. Please read it in "
+            "full, and contact the relevant department if anything is unclear."
+            f"\n\n{quoted}"
+        ),
+        answered_from_context=True,
+        citations=[
+            AnswerCitation(
+                document_id=str(passage.document.id),
+                title=passage.document.title,
+                page=passage.chunk.page_number,
+                quote=truncate(passage.chunk.content, 300),
+            )
+            for passage in top
+        ],
+        confidence=min(retrieval.top_score, 0.6),
+        follow_up_questions=[],
+        escalate_to_human=False,
+    )
 
 
 def _no_answer_text() -> str:

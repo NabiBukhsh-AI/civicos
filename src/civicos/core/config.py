@@ -87,8 +87,8 @@ class AISettings(BaseModel):
     """
 
     provider: Literal["anthropic", "google", "openai", "mock"] = "mock"
-    chat_model: str = "claude-sonnet-5"
-    fast_model: str = "claude-haiku-4-5-20251001"
+    chat_model: str = "claude-opus-5"
+    fast_model: str = "claude-haiku-4-5"
 
     vision_provider: Literal["anthropic", "google", "openai", "mock", "default"] = "default"
     vision_model: str | None = None
