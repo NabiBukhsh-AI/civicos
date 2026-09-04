@@ -155,7 +155,12 @@ class Department(UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin, MetadataMixin
     description: Mapped[str | None] = mapped_column(Text)
 
     head_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+        Uuid(as_uuid=True),
+        # `users.department_id` points back here, so this pair is mutually
+        # dependent. `use_alter` emits the constraint as a separate ALTER once
+        # both tables exist - SQLite tolerates the cycle, PostgreSQL does not.
+        ForeignKey("users.id", ondelete="SET NULL", use_alter=True,
+                   name="fk_departments_head_user_id_users"),
     )
     contact_phone: Mapped[str | None] = mapped_column(String(40))
     contact_email: Mapped[str | None] = mapped_column(String(160))
